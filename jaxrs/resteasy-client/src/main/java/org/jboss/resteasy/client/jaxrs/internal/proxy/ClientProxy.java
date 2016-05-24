@@ -1,8 +1,12 @@
 package org.jboss.resteasy.client.jaxrs.internal.proxy;
 
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.MethodHandles.Lookup;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.Map;
 
 import javax.ws.rs.client.WebTarget;
@@ -40,6 +44,11 @@ public class ClientProxy implements InvocationHandler
 		this.clazz = clazz;
 	}
 
+	private static boolean isDefault(Method method) {
+		return ((method.getModifiers() & (Modifier.ABSTRACT | Modifier.PUBLIC | Modifier.STATIC)) ==
+			Modifier.PUBLIC) && method.getDeclaringClass().isInterface();
+	}
+
 	public Object invoke(Object o, Method method, Object[] args)
            throws Throwable
    {
@@ -51,7 +60,21 @@ public class ClientProxy implements InvocationHandler
       MethodInvoker clientInvoker = methodMap.get(method);
       if (clientInvoker == null)
       {
-         if (method.getName().equals("equals"))
+	      if (isDefault(method)) {
+		      // Call default methods as-is.
+		      // Approach from https://rmannibucau.wordpress.com/2014/03/27/java-8-default-interface-methods-and-jdk-dynamic-proxies/
+		      final Constructor<Lookup> constructor = MethodHandles.Lookup.class.getDeclaredConstructor(Class.class, int.class);
+		      if (!constructor.isAccessible()) {
+			      constructor.setAccessible(true);
+		      }
+
+		      final Class<?> declaringClass = method.getDeclaringClass();
+		      return constructor.newInstance(declaringClass, MethodHandles.Lookup.PRIVATE)
+			      .unreflectSpecial(method, declaringClass)
+			      .bindTo(o)
+			      .invokeWithArguments(args);
+	      }
+         else if (method.getName().equals("equals"))
          {
             return this.equals(o);
          }

@@ -13,6 +13,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Proxy;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -31,6 +32,11 @@ public class ProxyBuilder<T>
    public static <T> ProxyBuilder<T> builder(Class<T> iface, WebTarget webTarget)
    {
       return new ProxyBuilder<T>(iface, (ResteasyWebTarget)webTarget);
+   }
+
+   private static boolean isDefault(Method method) {
+      return ((method.getModifiers() & (Modifier.ABSTRACT | Modifier.PUBLIC | Modifier.STATIC)) ==
+         Modifier.PUBLIC) && method.getDeclaringClass().isInterface();
    }
 
 	@SuppressWarnings("unchecked")
@@ -54,7 +60,10 @@ public class ProxyBuilder<T>
 		   }
          MethodInvoker invoker;
          Set<String> httpMethods = IsHttpMethod.getHttpMethods(method);
-         if ((httpMethods == null || httpMethods.size() == 0) && method.isAnnotationPresent(Path.class) && method.getReturnType().isInterface())
+         if (isDefault(method)) {
+            continue;
+         }
+         else if ((httpMethods == null || httpMethods.size() == 0) && method.isAnnotationPresent(Path.class) && method.getReturnType().isInterface())
          {
             invoker = new SubResourceInvoker((ResteasyWebTarget)base, method, config);
          }
