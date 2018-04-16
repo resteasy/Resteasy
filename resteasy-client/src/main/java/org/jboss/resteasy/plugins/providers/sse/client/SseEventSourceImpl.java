@@ -13,15 +13,18 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.ServiceUnavailableException;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.sse.InboundSseEvent;
 import javax.ws.rs.sse.SseEventSource;
 
 import org.apache.http.HttpHeaders;
 import org.jboss.resteasy.client.jaxrs.ResteasyWebTarget;
+import org.jboss.resteasy.client.jaxrs.internal.ClientInvocation;
 import org.jboss.resteasy.plugins.providers.sse.SseConstants;
 import org.jboss.resteasy.plugins.providers.sse.SseEventInputImpl;
 import org.jboss.resteasy.resteasy_jaxrs.i18n.Messages;
@@ -237,15 +240,7 @@ public class SseEventSourceImpl implements SseEventSource
    @Override
    public boolean close(final long timeout, final TimeUnit unit)
    {
-      if (state.getAndSet(State.CLOSED) != State.CLOSED)
-      {
-         ResteasyWebTarget resteasyWebTarget = (ResteasyWebTarget) target;
-         //close httpEngine to close connection
-         resteasyWebTarget.getResteasyClient().httpEngine().close();
-         executor.shutdownNow();
-
-         onCompleteConsumers.forEach(Runnable::run);
-      }
+      internalClose();
       try
       {
          if (!executor.awaitTermination(timeout, unit))
@@ -255,14 +250,65 @@ public class SseEventSourceImpl implements SseEventSource
       }
       catch (InterruptedException e)
       {
-         onErrorConsumers.forEach(consumer -> {
-            consumer.accept(e);
-         });
+         notifyErrorConsumers(e);
          Thread.currentThread().interrupt();
          return false;
       }
 
       return true;
+   }
+   
+   private void internalClose(){
+      if (state.getAndSet(State.CLOSED) != State.CLOSED)
+      {
+         ResteasyWebTarget resteasyWebTarget = (ResteasyWebTarget) target;
+         //close httpEngine to close connection
+         resteasyWebTarget.getResteasyClient().httpEngine().close();
+         executor.shutdownNow();
+         notifyCompleteConsumers();
+      }
+   }
+   
+   private void notifyEventConsumers(InboundSseEvent sseEvent)
+   {
+      onEventConsumers.forEach(consumer -> {
+         try
+         {
+            consumer.accept(sseEvent);
+         }
+         catch (Throwable e)
+         {
+            //We don't care about the error but we don't want it to prevent us from iterating on others consumers.
+         }
+      });
+   }
+
+   private void notifyErrorConsumers(Throwable throwable)
+   {
+      onErrorConsumers.forEach(consumer -> {
+         try
+         {
+            consumer.accept(throwable);
+         }
+         catch (Throwable e)
+         {
+            // We don't care about the error but we don't want it to prevent us from iterating on others consumers.
+         }
+      });
+   }
+
+   private void notifyCompleteConsumers()
+   {
+      onCompleteConsumers.forEach((runnable) -> {
+         try
+         {
+            runnable.run();
+         }
+         catch (Throwable e)
+         {
+            //We don't care about the error but we don't want it to prevent us from iterating on others consumers.
+         }
+      });
    }
 
    private class EventHandler implements Runnable
@@ -291,42 +337,95 @@ public class SseEventSourceImpl implements SseEventSource
       @Override
       public void run()
       {
+         if (state.get() != State.OPEN)
+         {
+            return;
+         }
+         
          SseEventInputImpl eventInput = null;
          long delay = reconnectDelay;
+         Response response = null;
          try
          {
-            final Invocation.Builder request = buildRequest();
-            if (state.get() == State.OPEN)
+            Date requestTime = new Date();
+            try
             {
-               eventInput = request.get(SseEventInputImpl.class);
+               response = buildRequest().get();
             }
-            //if 200< response code <300 and response contentType is null, fail the connection. 
-            if (eventInput == null)
+            catch (ProcessingException | IllegalArgumentException e)
             {
-               state.set(State.CLOSED);
+               if (State.CLOSED == state.get())
+               {
+                  // At this stage the ProcessingException can be either a normal consequence of the 'close(...)' method invocation
+                  // and in this case it's not an error at all, or a real error due to IO problem.
+                  // So instead of notifying error consumers of something that may not be an error at all, it is acceptable to do
+                  // nothing since user already asked to close the SseEventSource anyway.
+                  //
+                  // IllegalStateException should always be a normal consequence of the 'close(...)' method invocation.
+                  return;
+               }
+               throw e;
             }
-         }
-         catch (ServiceUnavailableException ex)
-         {
-            if (ex.hasRetryAfter())
+            switch (response.getStatus())
             {
-               Date requestTime = new Date();
-               delay = ex.getRetryTime(requestTime).getTime() - requestTime.getTime();
+               case 200 :
+                  MediaType mediaType = response.getMediaType();
+                  //We don't want to include charset and other params in the check
+                  if (mediaType != null && MediaType.SERVER_SENT_EVENTS_TYPE.getType().equals(mediaType.getType())
+                        && MediaType.SERVER_SENT_EVENTS_TYPE.getSubtype().equals(mediaType.getSubtype()))
+                  {
+                     try
+                     {
+                        eventInput = response.readEntity(SseEventInputImpl.class);
+                     }
+                     catch (ProcessingException | IllegalArgumentException e)
+                     {
+                        if (State.CLOSED == state.get())
+                        {
+                           // At this stage the ProcessingException or IllegalStateException can be either a normal consequence of
+                           // the 'close(...)' method invocation and in this case it's not an error at all, or a real error due to 
+                           // IO/response processing problems.
+                           // So instead of notifying error consumers of something that may not be an error at all, it is acceptable to do
+                           // nothing since user already asked to close the SseEventSource anyway.
+                           return;
+                        }
+                        throw e;
+                     }
+                  }
+                  else
+                  {
+                     // Throw exception.
+                     ClientInvocation.handleErrorStatus(response);
+                  }
+                  break;
+               case 204 :
+                  internalClose();
+                  break;
+               case 503 :
+                  ServiceUnavailableException serviceUnavailableException = new ServiceUnavailableException(response);
+                  if (serviceUnavailableException.hasRetryAfter())
+                  {
+                     delay = serviceUnavailableException.getRetryTime(requestTime).getTime() - requestTime.getTime();
+                     // No need to notify error consumers since it is not an unrecoverable error.
+                     // 503 with retry after is an error whose recovery mechanism is reconnect so it's not unrecoverable.
+                  }
+                  else
+                  {
+                     // 503 without retry after is an error without recovery mechanism so we have to notify on error consumers.
+                     throw serviceUnavailableException;
+                  }
+                  break;
+               default :
+                  // Throw exception.
+                  ClientInvocation.handleErrorStatus(response);
+                  break;
             }
-            else
-            {
-               state.set(State.CLOSED);
-            }
-            onErrorConsumers.forEach(consumer -> {
-               consumer.accept(ex);
-            });
          }
          catch (Throwable e)
          {
-            onErrorConsumers.forEach(consumer -> {
-               consumer.accept(e);
-            });
-            state.set(State.CLOSED);
+            // Fail connection is an unrecoverable error so we have to notify error consumers.
+            notifyErrorConsumers(e);
+            internalClose();
          }
          finally
          {
@@ -335,11 +434,12 @@ public class SseEventSourceImpl implements SseEventSource
                connectedLatch.countDown();
             }
          }
+         
          while (!Thread.currentThread().isInterrupted() && state.get() == State.OPEN)
          {
             if (eventInput == null || eventInput.isClosed())
             {
-               reconnect(delay);
+               reconnect(response, delay);
                break;
             }
             else
@@ -354,19 +454,12 @@ public class SseEventSourceImpl implements SseEventSource
                      {
                         delay = event.getReconnectDelay();
                      }
-                     onEventConsumers.forEach(consumer -> {
-                        consumer.accept(event);
-                     });
-                  }
-                  else
-                  {
-                     //event sink closed
-                     break;
+                     notifyEventConsumers(event);
                   }
                }
                catch (IOException e)
                {
-                  reconnect(delay);
+                  reconnect(response,delay);
                   break;
                }
             }
@@ -413,8 +506,12 @@ public class SseEventSourceImpl implements SseEventSource
          return request;
       }
 
-      private void reconnect(final long delay)
+      private void reconnect(Response previousResponse, final long delay)
       {
+         // Let's close the previous response to be sure to release any resource (pooled connections) before trying again.
+         // It is useful since only the response headers may have been processed and the response entity ignored.
+         // previousRepsonse must/will not be null when this method is called.
+         previousResponse.close();
          if (state.get() != State.OPEN)
          {
             return;

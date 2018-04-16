@@ -108,7 +108,7 @@ public class SseReconnectTest {
                 eventSource.open();
 
                 boolean waitResult = latch.await(30, TimeUnit.SECONDS);
-                Assert.assertEquals(1, errors.get());
+                Assert.assertEquals(0, errors.get());
                 Assert.assertTrue("Waiting for event to be delivered has timed out.", waitResult);
             }
             Assert.assertTrue("ServiceAvailable message is expected", results.get(0).equals("ServiceAvailable"));

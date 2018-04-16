@@ -19,6 +19,8 @@ import org.junit.runner.RunWith;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.sse.InboundSseEvent;
 import javax.ws.rs.sse.SseEventSource;
 import java.util.ArrayList;
@@ -150,5 +152,150 @@ public class SseEventSourceTest {
             client.close();
         }
     }
+    
+   // We are expecting the SseEventSource connection to fail when a response other than 200 is received.
+   // In this case, it must be closed and must notify:
+   // - error listeners since it is an unrecoverable error.
+   // - completion listener since no further events will be received.
+   @Test
+   public void testFailConnectionOnResponseOtherThan200() throws InterruptedException
+   {
+      CountDownLatch latch = new CountDownLatch(2);
+      Client client = ClientBuilder.newBuilder().build();
+      try
+      {
+         WebTarget webTarget = client.target(generateURL("/sse/genericResponse"))
+               .queryParam(SseSmokeResource.RESPONSE_STATUS, Status.CREATED.name())
+               .queryParam(SseSmokeResource.RESPONSE_CONTENT_TYPE, MediaType.SERVER_SENT_EVENTS_TYPE)
+               .queryParam(SseSmokeResource.RESPONSE_CONTENT, "data: Hi guys\n\n");
+         try (SseEventSource eventSource = SseEventSource.target(webTarget).build())
+         {
+            eventSource.register(event -> {
+               throw new RuntimeException();
+            }, ex -> {
+               latch.countDown();
+            }, () -> {
+               latch.countDown();
+            });
+            eventSource.open();
+            boolean waitResult = latch.await(20, TimeUnit.SECONDS);
+            Assert.assertTrue("The SseEventSource connection was supposed to fail", waitResult);
+            Assert.assertFalse(eventSource.isOpen());
+         }
+      }
+      finally
+      {
+         client.close();
+      }
+   }
+
+   // We are expecting the SseEventSource connection to fail when a 200 response with a Content-Type header unspecified or other than text/event-stream is received.
+   // In this case, it must be closed and must notify:
+   // - error listeners since it is an unrecoverable error.
+   // - completion listener since no further events will be received.
+   @Test
+   public void testFailConnectionOn200AndWrongContentType() throws InterruptedException
+   {
+      for (MediaType mediaType : new MediaType[]
+      {MediaType.TEXT_PLAIN_TYPE, MediaType.WILDCARD_TYPE})
+      {
+         Client client = ClientBuilder.newBuilder().build();
+         try
+         {
+            CountDownLatch latch = new CountDownLatch(2);
+            WebTarget webTarget = client.target(generateURL("/sse/genericResponse"))
+                  .queryParam(SseSmokeResource.RESPONSE_STATUS, Status.OK.name())
+                  .queryParam(SseSmokeResource.RESPONSE_CONTENT_TYPE, mediaType)
+                  .queryParam(SseSmokeResource.RESPONSE_CONTENT, "data: Hi guys\n\n");
+            try (SseEventSource eventSource = SseEventSource.target(webTarget).build())
+            {
+               eventSource.register(event -> {
+               }, ex -> {
+                  latch.countDown();
+               }, () -> {
+                  latch.countDown();
+               });
+               eventSource.open();
+               boolean waitResult = latch.await(20, TimeUnit.SECONDS);
+               Assert.assertTrue("The SseEventSource connection was supposed to fail", waitResult);
+               Assert.assertFalse(eventSource.isOpen());
+            }
+         }
+         finally
+         {
+            client.close();
+         }
+      }
+   }
+
+   // We are expecting the SseEventSource to close itself and not try to reconnect on a 204 response.
+   // In this case, it must be closed and must notify:
+   // - completion listener since no further events will be received.
+   // Error listeners are not notified in this case since it is a normal behavior.
+   @Test
+   public void testClosedOn204() throws InterruptedException
+   {
+      CountDownLatch latch = new CountDownLatch(1);
+      Client client = ClientBuilder.newBuilder().build();
+      try
+      {
+         WebTarget webTarget = client.target(generateURL("/sse/genericResponse"))
+               .queryParam(SseSmokeResource.RESPONSE_STATUS, Status.NO_CONTENT.name())
+               .queryParam(SseSmokeResource.RESPONSE_CONTENT_TYPE, MediaType.SERVER_SENT_EVENTS_TYPE);
+         try (SseEventSource eventSource = SseEventSource.target(webTarget).build())
+         {
+            eventSource.register(event -> {
+               throw new RuntimeException();
+            }, ex -> {
+               throw new RuntimeException();
+            }, () -> {
+               latch.countDown();
+            });
+            eventSource.open();
+            boolean waitResult = latch.await(20, TimeUnit.SECONDS);
+            Assert.assertTrue("The SseEventSource connection was supposed to be closed", waitResult);
+            Assert.assertFalse(eventSource.isOpen());
+         }
+      }
+      finally
+      {
+         client.close();
+      }
+   }
+   
+   // We are expecting the SseEventSource to reconnect when the connection is closed (gracefully or not).
+   // In this case, no error listener will be notified since it is not an unrecoverable error since we are trying to reconnect.
+   // Completion listener will not be notified neither since other events will be received.
+   @Test
+   public void testReconnectOnConnectionClosed() throws InterruptedException
+   {
+      CountDownLatch latch = new CountDownLatch(2);
+      Client client = ClientBuilder.newBuilder().build();
+      try
+      {
+         WebTarget webTarget = client.target(generateURL("/sse/genericResponse"))
+               .queryParam(SseSmokeResource.RESPONSE_STATUS, Status.OK.name())
+               .queryParam(SseSmokeResource.RESPONSE_CONTENT_TYPE, MediaType.SERVER_SENT_EVENTS_TYPE)
+               .queryParam(SseSmokeResource.RESPONSE_CONTENT, "data: Hi guys\n\n");
+         try (SseEventSource eventSource = SseEventSource.target(webTarget).build())
+         {
+            eventSource.register(event -> {
+               latch.countDown();
+            }, ex -> {
+               throw new RuntimeException();
+            }, () -> {
+               throw new RuntimeException();
+            });
+            eventSource.open();
+            boolean waitResult = latch.await(20, TimeUnit.SECONDS);
+            Assert.assertTrue("The SseEventSource connection was supposed to reconnect", waitResult);
+            Assert.assertTrue(eventSource.isOpen());
+         }
+      }
+      finally
+      {
+         client.close();
+      }
+   }
 
 }

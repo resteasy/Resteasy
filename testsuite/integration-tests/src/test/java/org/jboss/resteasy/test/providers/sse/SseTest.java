@@ -474,29 +474,9 @@ public class SseTest
       Assert.assertEquals("text/event-stream is expected", response.getMediaType(), MediaType.SERVER_SENT_EVENTS_TYPE);
       client.close();
    }
-   @Test
-   @InSequence(12)
-   public void testNoReconnectAfterEventSinkClose() throws Exception
-   {
-      final List<String> results = new ArrayList<String>();
-      Client client = ClientBuilder.newBuilder().build();
-      WebTarget target = client.target(generateURL("/service/server-sent-events/closeAfterSent"));
-      try (SseEventSource source = SseEventSource.target(target).build())
-      {
-         source.register(event -> results.add(event.readData()));
-         source.open();
-         Thread.sleep(1000);
-      }
-      catch (InterruptedException e)
-      {
-         // falls through
-         e.printStackTrace();
-      }
-      Assert.assertEquals("Received unexpected events", "[thing1, thing2, thing3]", results.toString());
-   }
    
    @Test
-   @InSequence(13)
+   @InSequence(12)
    public void testNoContent() throws Exception
    {
       Client client = ClientBuilder.newBuilder().build();
