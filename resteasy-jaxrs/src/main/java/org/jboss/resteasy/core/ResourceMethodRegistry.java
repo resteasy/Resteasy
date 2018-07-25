@@ -366,6 +366,10 @@ public class ResourceMethodRegistry implements Registry
             rootNode.addInvoker(fullpath, locator);
          else root.addInvoker(classExpression, fullpath, locator);
       }
+
+      if (rf instanceof SingletonResource) {
+         providerFactory.registerSingletonResource((SingletonResource) rf);
+      }
    }
 
    /**

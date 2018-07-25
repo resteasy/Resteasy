@@ -20,6 +20,7 @@ import org.jboss.resteasy.plugins.delegates.MediaTypeHeaderDelegate;
 import org.jboss.resteasy.plugins.delegates.NewCookieHeaderDelegate;
 import org.jboss.resteasy.plugins.delegates.UriHeaderDelegate;
 import org.jboss.resteasy.plugins.providers.RegisterBuiltin;
+import org.jboss.resteasy.plugins.server.resourcefactory.SingletonResource;
 import org.jboss.resteasy.resteasy_jaxrs.i18n.LogMessages;
 import org.jboss.resteasy.resteasy_jaxrs.i18n.Messages;
 import org.jboss.resteasy.specimpl.LinkBuilderImpl;
@@ -262,6 +263,8 @@ public class ResteasyProviderFactory extends RuntimeDelegate implements Provider
 
    protected ResourceBuilder resourceBuilder;
 
+   // RESTEASY-1865 resource factories for singleton resources
+   private Map<Class<?>, SingletonResource> singletonResourceFactories;
 
    public ResteasyProviderFactory()
    {
@@ -351,6 +354,7 @@ public class ResteasyProviderFactory extends RuntimeDelegate implements Provider
       builtinsRegistered = false;
       registerBuiltins = true;
 
+      singletonResourceFactories = new HashMap<>();
       injectorFactory = new InjectorFactoryImpl();
       addHeaderDelegate(MediaType.class, new MediaTypeHeaderDelegate());
       addHeaderDelegate(NewCookie.class, new NewCookieHeaderDelegate());
@@ -2600,6 +2604,16 @@ public class ResteasyProviderFactory extends RuntimeDelegate implements Provider
       return getInjectorFactory().createConstructor(constructor, this);
    }
 
+   public void registerSingletonResource(SingletonResource resource)
+   {
+      singletonResourceFactories.put(resource.getScannableClass(), resource);
+   }
+
+   private <T> boolean isSingletonResource(Class<T> resourceClass)
+   {
+      return singletonResourceFactories.containsKey(resourceClass);
+   }
+
    /**
     * Property and constructor injection using the InjectorFactory.
     *
@@ -2629,8 +2643,16 @@ public class ResteasyProviderFactory extends RuntimeDelegate implements Provider
     */
    public <T> T injectedInstance(Class<? extends T> clazz, HttpRequest request, HttpResponse response)
    {
-      Constructor<?> constructor = PickConstructor.pickSingletonConstructor(clazz);
       Object obj = null;
+
+      if (isSingletonResource(clazz))
+      {
+         SingletonResource factory = singletonResourceFactories.get(clazz);
+         obj = factory.createResource(request, response, this).toCompletableFuture().getNow(null);
+      }
+      else
+      {
+      Constructor<?> constructor = PickConstructor.pickSingletonConstructor(clazz);
       if (constructor == null)
       {
          // TODO this is solely to pass the TCK.  This is WRONG WRONG WRONG!  I'm challenging.
@@ -2688,6 +2710,7 @@ public class ResteasyProviderFactory extends RuntimeDelegate implements Provider
          ConstructorInjector constructorInjector = getInjectorFactory().createConstructor(constructor, this);
          obj = constructorInjector.construct(request, response, false).toCompletableFuture().getNow(null);
 
+      }
       }
       PropertyInjector propertyInjector = getInjectorFactory().createPropertyInjector(clazz, this);
 
