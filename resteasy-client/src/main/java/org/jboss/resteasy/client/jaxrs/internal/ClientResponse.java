@@ -185,6 +185,7 @@ public abstract class ClientResponse extends BuiltResponse
    private static class InputStreamWrapper extends FilterInputStream {
 
       private ClientResponse response;
+      private boolean isClosed;
 
       protected InputStreamWrapper(final InputStream in, final ClientResponse response) {
          super(in);
@@ -218,8 +219,16 @@ public abstract class ClientResponse extends BuiltResponse
 
       @Override
       public void close() throws IOException {
+         //check to prevent StackOverflowException when this.response.releaseConnection() will be invoked
+         if(isClosed){
+            return;
+         }
+         isClosed=true;
+         response.streamRead=true;
+         response.streamFullyRead = true;
          super.close();
-         this.response.close();
+         //Is this really needed ?
+         this.response.releaseConnection();
       }
    }
 
@@ -248,65 +257,54 @@ public abstract class ClientResponse extends BuiltResponse
    public synchronized <T> T readEntity(Class<T> type, Type genericType, Annotation[] anns)
    {
       abortIfClosed();
-      if (entity != null)
+      if (entity instanceof InputStream && bufferedEntity == null)
       {
-         if (type.isInstance((this.entity)))
+         setInputStream(checkEntityReadAsInputStreamFullyConsumed((InputStream) entity));
+         entity = null;
+      }
+      else if (bufferedEntity == null && this.streamFullyRead)
+      {
+         if (entity != null)
          {
-            return (T)entity;
+            throw new IllegalStateException(Messages.MESSAGES.entityAlreadyRead(entity.getClass()));
          }
-         else if (entity instanceof InputStream)
-         {
-            setInputStream((InputStream)entity);
-            entity = null;
-         }
-         else if (bufferedEntity == null)
-         {
-            throw new RuntimeException(Messages.MESSAGES.entityAlreadyRead(entity.getClass()));
-         }
-         else
-         {
-            entity = null;
-         }
+         throw new IllegalStateException();
+      }
+      else
+      {
+         entity = null;
       }
 
-      if (entity == null)
-      {
-         if (status == HttpResponseCodes.SC_NO_CONTENT)
-            return null;
+      if (status == HttpResponseCodes.SC_NO_CONTENT)
+         return null;
 
-         try
+      try
+      {
+         entity = readFrom(type, genericType, getMediaType(), anns);
+         if (entity == null || (!InputStream.class.isInstance(entity) && !Reader.class.isInstance(entity)
+               && !EventInput.class.isInstance(entity) && bufferedEntity == null))
          {
-            entity = readFrom(type, genericType, getMediaType(), anns);
-            if (entity == null || (entity != null
-               && !InputStream.class.isInstance(entity)
-               && !Reader.class.isInstance(entity)
-               && bufferedEntity == null))
-            {
-               try
-               {
-                  if (!EventInput.class.isInstance(entity))
-                  {
-                     close();
-                  }
-               }
-               catch (Exception ignored)
-               {
-               }
-            }
-         }
-         catch (RuntimeException e)
-         {
-            //logger.error("failed", e);
             try
             {
-               close();
+               releaseConnection();
             }
             catch (Exception ignored)
             {
-
             }
-            throw e;
          }
+      }
+      catch (RuntimeException e)
+      {
+         //logger.error("failed", e);
+         try
+         {
+            releaseConnection();
+         }
+         catch (Exception ignored)
+         {
+
+         }
+         throw e;
       }
       return (T) entity;
    }
