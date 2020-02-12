@@ -354,9 +354,10 @@ public class ResteasyClientBuilderImpl extends ResteasyClientBuilder
          // create a new one
          providerFactory = new LocalResteasyProviderFactory(RegisterBuiltin.getClientInitializedResteasyProviderFactory(loader));
 
-         if (ResteasyProviderFactory.peekInstance() != null)
+         ResteasyProviderFactory f = ResteasyProviderFactory.peekInstance();
+         if (f != null)
          {
-            providerFactory.initializeClientProviders(ResteasyProviderFactory.getInstance());
+            providerFactory.initializeClientProviders(f);
          }
          // Execution of 'if' above overwrites providerFactory clientRequestFilterRegistry
          // Reregister provider as appropriate.

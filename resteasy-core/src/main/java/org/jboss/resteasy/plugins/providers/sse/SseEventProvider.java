@@ -103,8 +103,9 @@ public class SseEventProvider implements MessageBodyWriter<OutboundSseEvent>, Me
             }
 
             entityStream.write(SseConstants.DATA_LEAD);
-            MessageBodyWriter writer = ResteasyProviderFactory.getInstance().getMessageBodyWriter(payloadClass,
-                  payloadType, annotations, event.getMediaType());
+            ResteasyProviderFactory f = ResteasyProviderFactory.peekInstance();
+            MessageBodyWriter writer = f != null ? f.getMessageBodyWriter(payloadClass,
+                  payloadType, annotations, event.getMediaType()) : null;
 
             if (writer == null)
             {

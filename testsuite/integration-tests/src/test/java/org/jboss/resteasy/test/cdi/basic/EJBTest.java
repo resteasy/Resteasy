@@ -16,7 +16,9 @@ import org.jboss.resteasy.test.cdi.util.Constants;
 import org.jboss.resteasy.test.cdi.util.Counter;
 import org.jboss.resteasy.test.cdi.util.Utilities;
 import org.jboss.resteasy.test.cdi.util.UtilityProducer;
+import org.jboss.resteasy.core.ThreadLocalResteasyProviderFactory;
 import org.jboss.resteasy.spi.HttpResponseCodes;
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.utils.PermissionUtil;
 import org.jboss.resteasy.utils.PortProviderUtil;
 import org.jboss.shrinkwrap.api.Archive;
@@ -24,7 +26,10 @@ import org.jboss.shrinkwrap.api.ShrinkWrap;
 import org.jboss.shrinkwrap.api.asset.EmptyAsset;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -64,6 +69,8 @@ public class EJBTest {
     */
    public static final String DEPLOYMENT_NAME = "resteasy-ejb-test";
 
+   private ResteasyProviderFactory defaultProviderFactory;
+
    private Client client;
 
    @Deployment
@@ -93,6 +100,14 @@ public class EJBTest {
       return war;
    }
 
+   @BeforeClass
+   public static void readResteasyProviderFactory() {
+   }
+
+   @AfterClass
+   public static void verifyResteasyProviderFactory() {
+   }
+
    private String generateURL(String path) {
       return PortProviderUtil.generateURL(path, DEPLOYMENT_NAME);
    }
@@ -102,12 +117,24 @@ public class EJBTest {
     */
    @Before
    public void init() {
+      defaultProviderFactory = ResteasyProviderFactory.peekInstance();
       client = ClientBuilder.newClient();
    }
 
    @After
    public void close() {
       client.close();
+      ResteasyProviderFactory rpf = ResteasyProviderFactory.peekInstance();
+      if (rpf instanceof ThreadLocalResteasyProviderFactory) {
+         if (defaultProviderFactory == null) {
+            //NOOP, usual case when first deployment is processed...
+         } else if (defaultProviderFactory instanceof ThreadLocalResteasyProviderFactory) {
+            Assert.assertEquals(((ThreadLocalResteasyProviderFactory)defaultProviderFactory).getDelegate(), ((ThreadLocalResteasyProviderFactory)rpf).getDelegate());
+         }
+      } else {
+         Assert.assertEquals(defaultProviderFactory, rpf);
+      }
+      defaultProviderFactory = null;
    }
 
    /**

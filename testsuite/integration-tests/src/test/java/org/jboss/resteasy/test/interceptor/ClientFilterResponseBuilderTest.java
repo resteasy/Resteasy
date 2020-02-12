@@ -3,6 +3,7 @@ package org.jboss.resteasy.test.interceptor;
 import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
 import org.jboss.arquillian.junit.Arquillian;
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.test.interceptor.resource.PriorityExecutionResource;
 import org.jboss.resteasy.test.interceptor.resource.ResponseBuilderCustomResponseFilter;
 //import org.jboss.resteasy.test.interceptor.resource.ResponseBuilderCustomRequestFilter;
@@ -12,8 +13,10 @@ import org.jboss.resteasy.utils.TestUtil;
 import org.jboss.shrinkwrap.api.Archive;
 import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.After;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
@@ -39,6 +42,18 @@ public class ClientFilterResponseBuilderTest {
     }
 
     static Client client;
+    static ResteasyProviderFactory defaultProviderFactory;
+
+    @BeforeClass
+    public static void readResteasyProviderFactory() {
+       defaultProviderFactory = ResteasyProviderFactory.peekInstance();
+    }
+
+    @AfterClass
+    public static void verifyResteasyProviderFactory() {
+       Assert.assertEquals(defaultProviderFactory, ResteasyProviderFactory.peekInstance());
+       defaultProviderFactory = null;
+    }
 
     @Before
     public void setup() {

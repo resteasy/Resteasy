@@ -150,9 +150,9 @@ public class BuiltResponse extends AbstractBuiltResponse
 
          }
 
-         ResteasyProviderFactory providerFactory = ResteasyProviderFactory.getInstance();
+         ResteasyProviderFactory providerFactory = ResteasyProviderFactory.peekInstance();
          ReaderInterceptor[] readerInterceptors = providerFactory
-                 .getServerReaderInterceptorRegistry()
+                 .getClientReaderInterceptorRegistry()
                  .postMatch(null, null);
 
          final Object finalObj;

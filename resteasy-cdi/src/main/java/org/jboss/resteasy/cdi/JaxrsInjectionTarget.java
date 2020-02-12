@@ -16,6 +16,9 @@ import org.jboss.resteasy.cdi.i18n.LogMessages;
 import org.jboss.resteasy.cdi.i18n.Messages;
 import org.jboss.resteasy.core.PropertyInjectorImpl;
 import org.jboss.resteasy.core.ResteasyContext;
+import org.jboss.resteasy.core.ThreadLocalResteasyProviderFactory;
+import org.jboss.resteasy.core.providerfactory.ResteasyProviderFactoryImpl;
+import org.jboss.resteasy.plugins.providers.RegisterBuiltin;
 import org.jboss.resteasy.spi.HttpRequest;
 import org.jboss.resteasy.spi.HttpResponse;
 import org.jboss.resteasy.spi.PropertyInjector;
@@ -38,6 +41,7 @@ public class JaxrsInjectionTarget<T> implements InjectionTarget<T>
    private Class<T> clazz;
    private PropertyInjector propertyInjector;
    private GeneralValidatorCDI validator;
+   private final ResteasyProviderFactory providerFactory;
 
    private boolean hasPostConstruct;
 
@@ -53,6 +57,8 @@ public class JaxrsInjectionTarget<T> implements InjectionTarget<T>
       this.delegate = delegate;
       this.clazz = clazz;
       hasPostConstruct = Types.hasPostConstruct(clazz, validatePostConstructParameters);
+      this.providerFactory = new ResteasyProviderFactoryImpl(null, true);
+      RegisterBuiltin.register(this.providerFactory);
    }
 
    public void inject(T instance, CreationalContext<T> ctx)
@@ -122,19 +128,40 @@ public class JaxrsInjectionTarget<T> implements InjectionTarget<T>
 
    public T produce(CreationalContext<T> ctx)
    {
-      return delegate.produce(ctx);
+      ResteasyProviderFactory defaultProviderFactory = ResteasyProviderFactory.peekInstance();
+      ThreadLocalResteasyProviderFactory tlFactory = null;
+      try {
+         if (defaultProviderFactory == null) {
+            ResteasyProviderFactory.setInstance(providerFactory);
+         } else {
+            if (!(defaultProviderFactory instanceof ThreadLocalResteasyProviderFactory)) {
+               tlFactory = new ThreadLocalResteasyProviderFactory(defaultProviderFactory);
+               ResteasyProviderFactory.setInstance(tlFactory);
+            }
+            ThreadLocalResteasyProviderFactory.push(providerFactory);
+         }
+         return delegate.produce(ctx);
+      } finally {
+         if (defaultProviderFactory == null) {
+            ResteasyProviderFactory.clearInstanceIfEqual(providerFactory);
+         } else {
+            if (!(defaultProviderFactory instanceof ThreadLocalResteasyProviderFactory)) {
+               ResteasyProviderFactory.clearInstanceIfEqual(tlFactory);
+            }
+            ThreadLocalResteasyProviderFactory.pop();
+          }
+      }
    }
 
    private PropertyInjector getPropertyInjector()
    {
-      return new PropertyInjectorImpl(clazz, ResteasyProviderFactory.getInstance());
+      return new PropertyInjectorImpl(clazz, providerFactory);
    }
 
    private void validate(HttpRequest request, T instance)
    {
       if (GetRestful.isRootResource(clazz))
       {
-         ResteasyProviderFactory providerFactory = ResteasyProviderFactory.getInstance();
          ContextResolver<GeneralValidatorCDI> resolver = providerFactory.getContextResolver(GeneralValidatorCDI.class, MediaType.WILDCARD_TYPE);
          if (resolver != null)
          {

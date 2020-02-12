@@ -79,7 +79,7 @@ public class RestClientProxyFactoryBean<T> implements FactoryBean<T>,
    public void afterPropertiesSet() throws Exception
    {
       if (resteasyProviderFactory == null)
-         resteasyProviderFactory = ResteasyProviderFactory.getInstance();
+         resteasyProviderFactory = ResteasyProviderFactory.newInstance();
       RegisterBuiltin.register(resteasyProviderFactory);
       ResteasyClientBuilder clientBuilder = (ResteasyClientBuilder)ClientBuilder.newBuilder();
       clientBuilder.providerFactory(resteasyProviderFactory);

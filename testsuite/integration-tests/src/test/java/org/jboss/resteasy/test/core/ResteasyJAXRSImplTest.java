@@ -152,6 +152,7 @@ public class ResteasyJAXRSImplTest
       ResteasyProviderFactory rpfGI = ResteasyProviderFactory.getInstance();
       Assert.assertTrue(ResteasyProviderFactory.class.isAssignableFrom(rpfGI.getClass()));
       Assert.assertNotEquals(rpfGI, rpf3);
+      ResteasyProviderFactory.setInstance(null);
    }
 
 }

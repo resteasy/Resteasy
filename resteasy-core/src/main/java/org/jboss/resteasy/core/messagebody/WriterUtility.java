@@ -23,7 +23,7 @@ import java.util.Map;
  * @author <a href="mailto:sduskis@gmail.com">Solomon Duskis</a>
  * @version $Revision: 1 $
  */
-
+@Deprecated
 public abstract class WriterUtility
 {
    private ResteasyProviderFactory factory;

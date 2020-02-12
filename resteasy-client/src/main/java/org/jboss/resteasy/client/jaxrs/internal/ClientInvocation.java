@@ -50,10 +50,12 @@ import org.jboss.resteasy.client.jaxrs.engines.AsyncClientHttpEngine.ResultExtra
 import org.jboss.resteasy.client.jaxrs.internal.proxy.ClientInvoker;
 import org.jboss.resteasy.core.ResteasyContext;
 import org.jboss.resteasy.core.ResteasyContext.CloseableContext;
+import org.jboss.resteasy.core.ThreadLocalResteasyProviderFactory;
 import org.jboss.resteasy.core.interception.jaxrs.AbstractWriterInterceptorContext;
 import org.jboss.resteasy.core.interception.jaxrs.ClientWriterInterceptorContext;
 import org.jboss.resteasy.plugins.providers.sse.EventInput;
 import org.jboss.resteasy.specimpl.MultivaluedTreeMap;
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.spi.util.Types;
 import org.jboss.resteasy.tracing.RESTEasyTracingLogger;
 import org.jboss.resteasy.util.DelegatingOutputStream;
@@ -703,20 +705,42 @@ public class ClientInvocation implements Invocation
       ClientResponseFilter[] responseFilters = getResponseFilters();
       if (responseFilters != null && responseFilters.length > 0)
       {
-         ClientResponseContextImpl responseContext = new ClientResponseContextImpl(response);
-         for (ClientResponseFilter filter : responseFilters)
-         {
-            try
-            {
-               filter.filter(requestContext, responseContext);
+         ResteasyProviderFactory defaultFactory = ResteasyProviderFactory.peekInstance();
+         ThreadLocalResteasyProviderFactory tlFactory = null;
+         if (defaultFactory == null) {
+            ResteasyProviderFactory.setInstance(configuration.getProviderFactory());
+         } else {
+            if (!(defaultFactory instanceof ThreadLocalResteasyProviderFactory)) {
+               tlFactory = new ThreadLocalResteasyProviderFactory(defaultFactory);
+               ResteasyProviderFactory.setInstance(tlFactory);
             }
-            catch (ResponseProcessingException e)
+            ThreadLocalResteasyProviderFactory.push(configuration.getProviderFactory());
+         }
+         try {
+            ClientResponseContextImpl responseContext = new ClientResponseContextImpl(response);
+            for (ClientResponseFilter filter : responseFilters)
             {
-               throw e;
+               try
+               {
+                  filter.filter(requestContext, responseContext);
+               }
+               catch (ResponseProcessingException e)
+               {
+                  throw e;
+               }
+               catch (Throwable e)
+               {
+                  throw new ResponseProcessingException(response, e);
+               }
             }
-            catch (Throwable e)
-            {
-               throw new ResponseProcessingException(response, e);
+         } finally {
+            if (defaultFactory == null) {
+               ResteasyProviderFactory.clearInstanceIfEqual(configuration.getProviderFactory());
+            } else {
+               if (!(defaultFactory instanceof ThreadLocalResteasyProviderFactory)) {
+                  ResteasyProviderFactory.clearInstanceIfEqual(tlFactory);
+               }
+               ThreadLocalResteasyProviderFactory.pop();
             }
          }
       }

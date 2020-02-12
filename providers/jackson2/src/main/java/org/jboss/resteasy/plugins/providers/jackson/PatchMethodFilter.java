@@ -27,7 +27,6 @@ import org.jboss.resteasy.spi.HttpResponse;
 import org.jboss.resteasy.spi.HttpResponseCodes;
 import org.jboss.resteasy.spi.Registry;
 import org.jboss.resteasy.spi.ResourceInvoker;
-import org.jboss.resteasy.spi.ResteasyProviderFactory;
 
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -79,7 +78,7 @@ public class PatchMethodFilter implements ContainerRequestFilter
             }
             Object object = methodInvoker.invokeDryRun(request, response).toCompletableFuture().getNow(null);
             ByteArrayOutputStream tmpOutputStream = new ByteArrayOutputStream();
-            MessageBodyWriter msgBodyWriter = ResteasyProviderFactory.getInstance().getMessageBodyWriter(
+            MessageBodyWriter msgBodyWriter = providers.getMessageBodyWriter(
                   object.getClass(), object.getClass(), methodInvoker.getMethodAnnotations(),
                   MediaType.APPLICATION_JSON_TYPE);
             msgBodyWriter.writeTo(object, object.getClass(), object.getClass(), methodInvoker.getMethodAnnotations(),

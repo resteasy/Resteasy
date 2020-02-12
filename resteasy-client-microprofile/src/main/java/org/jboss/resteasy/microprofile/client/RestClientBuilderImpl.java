@@ -83,8 +83,9 @@ public class RestClientBuilderImpl implements RestClientBuilder {
 
         if (PROVIDER_FACTORY != null) {
             ResteasyProviderFactory localProviderFactory = new LocalResteasyProviderFactory(PROVIDER_FACTORY);
-            if (ResteasyProviderFactory.peekInstance() != null) {
-                localProviderFactory.initializeClientProviders(ResteasyProviderFactory.getInstance());
+            ResteasyProviderFactory f = ResteasyProviderFactory.peekInstance();
+            if (f != null) {
+                localProviderFactory.initializeClientProviders(f);
             }
             builderDelegate.providerFactory(localProviderFactory);
         }

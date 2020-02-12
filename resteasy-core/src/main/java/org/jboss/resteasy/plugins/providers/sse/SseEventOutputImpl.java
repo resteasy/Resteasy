@@ -166,7 +166,7 @@ public class SseEventOutputImpl extends GenericType<OutboundSseEvent> implements
                   {
                      // Get element media type from @Produces.
                      jaxrsResponse = (BuiltResponse) Response.ok("").build();
-                     MediaType elementType = ServerResponseWriter.getResponseMediaType(jaxrsResponse, request, response, ResteasyProviderFactory.getInstance(), method);
+                     MediaType elementType = ServerResponseWriter.getResponseMediaType(jaxrsResponse, request, response, ResteasyProviderFactory.peekInstance(), method);
                      Map<String, String> parameterMap = new HashMap<String, String>();
                      parameterMap.put(SseConstants.SSE_ELEMENT_MEDIA_TYPE, elementType.toString());
                      String[] streamType = getStreamType(method);
@@ -183,7 +183,7 @@ public class SseEventOutputImpl extends GenericType<OutboundSseEvent> implements
             try
             {
                ServerResponseWriter.writeNomapResponse(jaxrsResponse, request, response,
-                     ResteasyProviderFactory.getInstance(), t -> {
+                     ResteasyProviderFactory.peekInstance(), t -> {
                   }, true);
                response.getOutputStream().write(SseConstants.EOL);
                response.getOutputStream().write(SseConstants.EOL);
