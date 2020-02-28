@@ -1,5 +1,6 @@
 package org.jboss.resteasy.core;
 
+import org.jboss.resteasy.core.providerfactory.ServerContext;
 import org.jboss.resteasy.plugins.providers.sse.SseImpl;
 import org.jboss.resteasy.resteasy_jaxrs.i18n.Messages;
 import org.jboss.resteasy.spi.HttpRequest;
@@ -121,7 +122,25 @@ public class ContextParameterInjector implements ValueInjector
                {
                   return method.invoke(factory, objects);
                }
-               throw new LoggableFailure(Messages.MESSAGES.unableToFindContextualData(rawType.getName()));
+
+               // Try server context.
+               ServerContext serverContext = factory.getContextData(ServerContext.class);
+               if (serverContext != null) {
+                  delegate = serverContext.get(rawType);
+               }
+               if (delegate == null)
+               {
+                  // Try ResteasyProviderFactory from server context.
+                  ResteasyProviderFactory serverFactory = (ResteasyProviderFactory) serverContext.get(ResteasyProviderFactory.class);
+                  if (serverFactory != null)
+                  {
+                     delegate = serverFactory.getContextData(rawType, genericType, annotations, false);
+                  }
+               }
+               if (delegate == null)
+               {
+                  throw new LoggableFailure(Messages.MESSAGES.unableToFindContextualData(rawType.getName()));
+               }
             }
             return method.invoke(delegate, objects);
          }

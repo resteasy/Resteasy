@@ -1,10 +1,10 @@
 package org.jboss.resteasy.microprofile.client.header;
 
-import org.eclipse.microprofile.rest.client.RestClientDefinitionException;
 import org.eclipse.microprofile.rest.client.annotation.RegisterClientHeaders;
 import org.eclipse.microprofile.rest.client.ext.ClientHeadersFactory;
 import org.eclipse.microprofile.rest.client.ext.DefaultClientHeadersFactoryImpl;
 import org.jboss.resteasy.microprofile.client.RestClientExtension;
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 
 import java.lang.reflect.Method;
 import java.util.Map;
@@ -70,14 +70,7 @@ public class ClientHeaderProviders {
                     return Optional.of(factoryClass.cast(factory));
                 }
             }
-            try {
-                return Optional.of(factoryClass.newInstance());
-            } catch (InstantiationException | IllegalAccessException e) {
-                throw new RestClientDefinitionException(
-                        "Failed to instantiate " + factoryClass.getCanonicalName() + ", the client header factory for " + source.getCanonicalName(),
-                        e
-                );
-            }
+            return Optional.of(ResteasyProviderFactory.getInstance().injectedInstance(factoryClass));
         } else {
             return Optional.empty();
         }

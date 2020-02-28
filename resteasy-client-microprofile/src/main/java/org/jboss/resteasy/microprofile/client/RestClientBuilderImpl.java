@@ -458,6 +458,9 @@ public class RestClientBuilderImpl implements RestClientBuilder {
         } else {
             try {
                 return clazz.newInstance();
+//                Something like this should be done for ALL providers. Maybe for MP REST Client 1.5.
+//                ResteasyProviderFactory rpf = ResteasyProviderFactory.getInstance();
+//                return rpf.injectedInstance(clazz);
             } catch (Throwable t) {
                 throw new RuntimeException("Failed to register " + clazz, t);
             }

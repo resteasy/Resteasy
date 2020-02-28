@@ -52,8 +52,10 @@ import org.jboss.resteasy.core.ResteasyContext;
 import org.jboss.resteasy.core.ResteasyContext.CloseableContext;
 import org.jboss.resteasy.core.interception.jaxrs.AbstractWriterInterceptorContext;
 import org.jboss.resteasy.core.interception.jaxrs.ClientWriterInterceptorContext;
+import org.jboss.resteasy.core.providerfactory.ServerContext;
 import org.jboss.resteasy.plugins.providers.sse.EventInput;
 import org.jboss.resteasy.specimpl.MultivaluedTreeMap;
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.jboss.resteasy.spi.util.Types;
 import org.jboss.resteasy.tracing.RESTEasyTracingLogger;
 import org.jboss.resteasy.util.DelegatingOutputStream;
@@ -661,8 +663,14 @@ public class ClientInvocation implements Invocation
 
    private CloseableContext pushProvidersContext()
    {
+      Map<Class<?>, Object> contextDataMap = ResteasyContext.getContextDataMap();
+      ServerContext serverContext = new ServerContext(contextDataMap);
+      ResteasyProviderFactory serverProviderFactory = (ResteasyProviderFactory) contextDataMap.get(ResteasyProviderFactory.class);
       CloseableContext ret = ResteasyContext.addCloseableContextDataLevel();
+      ResteasyContext.pushContext(ServerContext.class, serverContext);
       ResteasyContext.pushContext(Providers.class, configuration);
+      ResteasyContext.pushContext(Configuration.class, configuration);
+      ResteasyContext.pushContext(ResteasyProviderFactory.class, serverProviderFactory);
       return ret;
    }
 

@@ -1,6 +1,8 @@
 package org.jboss.resteasy.microprofile.client;
 
+import org.eclipse.microprofile.rest.client.ext.ClientHeadersFactory;
 import org.eclipse.microprofile.rest.client.inject.RegisterRestClient;
+import org.jboss.logging.Logger;
 
 import javax.enterprise.context.spi.CreationalContext;
 import javax.enterprise.event.Observes;
@@ -10,7 +12,9 @@ import javax.enterprise.inject.spi.Bean;
 import javax.enterprise.inject.spi.BeanManager;
 import javax.enterprise.inject.spi.BeforeBeanDiscovery;
 import javax.enterprise.inject.spi.Extension;
+import javax.enterprise.inject.spi.InjectionTarget;
 import javax.enterprise.inject.spi.ProcessAnnotatedType;
+import javax.enterprise.inject.spi.ProcessInjectionTarget;
 import javax.enterprise.inject.spi.WithAnnotations;
 
 import java.util.HashSet;
@@ -27,6 +31,9 @@ public class RestClientExtension implements Extension {
     private Set<Throwable> errors = new LinkedHashSet<>();
 
     private static BeanManager manager;
+
+    private static final Logger LOGGER = Logger.getLogger(RestClientExtension.class);
+
 
     /**
      * Verify that CDI is active.
@@ -48,6 +55,32 @@ public class RestClientExtension implements Extension {
         } else {
             errors.add(new IllegalArgumentException("Rest client needs to be an interface " + javaClass));
         }
+    }
+
+    /**
+     * Wrap InjectionTarget of JAX-RS components within JaxrsInjectionTarget
+     * which takes care of JAX-RS property injection.
+     *
+     * @param <T> type
+     * @param event event
+     */
+    public <T> void observeInjectionTarget(@Observes ProcessInjectionTarget<T> event)
+    {
+       if (event.getAnnotatedType() == null)
+       { // check for resin's bug http://bugs.caucho.com/view.php?id=3967
+          LOGGER.warn("ProcessInjectionTarget.getAnnotatedType() returned null. As a result, JAX-RS property injection will not work.");
+          return;
+       }
+
+       if (ClientHeadersFactory.class.isAssignableFrom(event.getAnnotatedType().getJavaClass()))
+       {
+          event.setInjectionTarget(wrapInjectionTarget(event));
+       }
+    }
+
+    protected <T> InjectionTarget<T> wrapInjectionTarget(ProcessInjectionTarget<T> event)
+    {
+       return new RestClientInjectionTarget<T>(event.getInjectionTarget(), event.getAnnotatedType().getJavaClass());
     }
 
     private Optional<String> extractBaseUri(RegisterRestClient annotation) {
