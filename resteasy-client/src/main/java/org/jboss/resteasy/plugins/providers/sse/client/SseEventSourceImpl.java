@@ -3,8 +3,10 @@ package org.jboss.resteasy.plugins.providers.sse.client;
 import java.io.IOException;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
@@ -15,6 +17,7 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status.Family;
 import javax.ws.rs.sse.InboundSseEvent;
 import javax.ws.rs.sse.SseEventSource;
@@ -38,7 +41,7 @@ public class SseEventSourceImpl implements SseEventSource
    private final SseEventSourceScheduler sseEventSourceScheduler;
 
    private enum State {
-      PENDING, OPEN, CLOSED
+      PENDING, CONNECTED, OPEN, CLOSED
    }
 
    private final AtomicReference<State> state = new AtomicReference<>(State.PENDING);
@@ -51,7 +54,11 @@ public class SseEventSourceImpl implements SseEventSource
 
    private boolean alwaysReconnect;
 
+   private EventHandler handler;
+
    private volatile ClientResponse response;
+
+   private CompletableFuture<Response> responseFuture;
 
    public static class SourceBuilder extends Builder
    {
@@ -166,11 +173,17 @@ public class SseEventSourceImpl implements SseEventSource
 
    public void open(String lastEventId, String verb, Entity<?> entity, MediaType... mediaTypes)
    {
+      if (state.compareAndSet(State.CONNECTED, State.OPEN))
+      { // if connect() was called
+         handler.startReading();
+         handler.awaitConnected();
+         return;
+      }
       if (!state.compareAndSet(State.PENDING, State.OPEN))
       {
          throw new IllegalStateException(Messages.MESSAGES.eventSourceIsNotReadyForOpen());
       }
-      EventHandler handler = new EventHandler(reconnectDelay, lastEventId, verb, entity, mediaTypes);
+      handler = new EventHandler(reconnectDelay, lastEventId, verb, entity, mediaTypes);
       sseEventSourceScheduler.schedule(handler, 0, TimeUnit.SECONDS);
       handler.awaitConnected();
    }
@@ -179,6 +192,27 @@ public class SseEventSourceImpl implements SseEventSource
    public boolean isOpen()
    {
       return state.get() == State.OPEN;
+   }
+
+   /*
+    Added for implementations of
+    connect() causes the EventHandler to make the initial invocation so that a
+    Response can be returned if responseFuture != null. EventHandler will then start
+    to read events once open() is called.
+    */
+   public void connect(String verb, Entity<?> entity, MediaType... mediaTypes)
+   {
+      if (!state.compareAndSet(State.PENDING, State.CONNECTED))
+      {
+         throw new IllegalStateException(Messages.MESSAGES.eventSourceIsNotReadyForOpen());
+      }
+      handler = new EventHandler(new CountDownLatch(1), reconnectDelay, null, verb, entity, mediaTypes);
+      sseEventSourceScheduler.schedule(handler, 0, TimeUnit.SECONDS);
+   }
+
+   public boolean isConnected()
+   {
+      return state.get() == State.CONNECTED;
    }
 
    @Override
@@ -224,6 +258,24 @@ public class SseEventSourceImpl implements SseEventSource
       onEventConsumers.add(onEvent);
       onErrorConsumers.add(onError);
       onCompleteConsumers.add(onComplete);
+   }
+
+   /*
+    * Sets responseFuture so that the initial Response generated in EventHandler
+    * can be retrieved.
+    */
+   public void register(CompletableFuture<Response> responseFuture)
+   {
+      this.responseFuture = responseFuture;
+   }
+
+   public Response getResponse()
+   {
+      try {
+         return responseFuture.get();
+      } catch (InterruptedException | ExecutionException e) {
+         throw new RuntimeException(e);
+      }
    }
 
    @Override
@@ -284,6 +336,7 @@ public class SseEventSourceImpl implements SseEventSource
       private String verb;
       private Entity<?> entity;
       private MediaType[] mediaTypes;
+      private CountDownLatch readLatch;
 
       EventHandler(final long reconnectDelay, final String lastEventId, final String verb, final Entity<?> entity, final MediaType... mediaTypes)
       {
@@ -293,6 +346,12 @@ public class SseEventSourceImpl implements SseEventSource
          this.verb = verb;
          this.entity = entity;
          this.mediaTypes = mediaTypes;
+      }
+
+      EventHandler(final CountDownLatch readLatch, final long reconnectDelay, final String lastEventId, final String verb, final Entity<?> entity, final MediaType... mediaTypes)
+      {
+         this(reconnectDelay, lastEventId, verb, entity, mediaTypes);
+         this.readLatch = readLatch;
       }
 
       private EventHandler(final EventHandler anotherHandler)
@@ -308,7 +367,7 @@ public class SseEventSourceImpl implements SseEventSource
       @Override
       public void run()
       {
-         if (state.get() != State.OPEN)
+         if (state.get() != State.OPEN && state.get() != State.CONNECTED)
          {
             return;
          }
@@ -327,6 +386,12 @@ public class SseEventSourceImpl implements SseEventSource
                request = requestBuilder.build(verb, entity);
             }
             response = (ClientResponse) request.invoke();
+
+            if (responseFuture != null)
+            {
+               responseFuture.complete(response);
+            }
+
             if (Family.SUCCESSFUL.equals(response.getStatusInfo().getFamily()))
             {
                onConnection();
@@ -334,6 +399,7 @@ public class SseEventSourceImpl implements SseEventSource
                //if 200<= response code <300 and response contentType is null, fail the connection.
                if (eventInput == null && !alwaysReconnect)
                {
+                  waitForSubscriber();
                   internalClose();
                   return;
                }
@@ -344,11 +410,13 @@ public class SseEventSourceImpl implements SseEventSource
                //This will also ensure that the connection is correctly closed.
                response.bufferEntity();
                //Throw an instance of WebApplicationException depending on the response.
+               waitForSubscriber();
                ClientInvocation.handleErrorStatus(response);
             }
          }
          catch (ServiceUnavailableException ex)
          {
+            waitForSubscriber();
             if (ex.hasRetryAfter())
             {
                onConnection();
@@ -367,9 +435,12 @@ public class SseEventSourceImpl implements SseEventSource
          }
          catch (Throwable e)
          {
+            waitForSubscriber();
             onUnrecoverableError(e);
             return;
          }
+
+         waitForSubscriber();
 
          while (!Thread.currentThread().isInterrupted() && state.get() == State.OPEN)
          {
@@ -414,6 +485,28 @@ public class SseEventSourceImpl implements SseEventSource
 
       }
 
+      /*
+       * Noop if readLatch is null, i.e., if connect() is not called before open().
+       */
+      private void waitForSubscriber()
+      {
+         if (readLatch == null)
+         {
+            return;
+         }
+         while (true)
+         {
+            try
+            {
+               readLatch.await();
+               return;
+            }
+            catch (InterruptedException e) {
+               // Keep waiting.
+            }
+         }
+      }
+
       private void onConnection()
       {
          connectedLatch.countDown();
@@ -441,6 +534,11 @@ public class SseEventSourceImpl implements SseEventSource
          onEventConsumers.forEach(consumer -> {
             consumer.accept(event);
          });
+      }
+
+      private void startReading()
+      {
+         readLatch.countDown();
       }
 
       private Invocation.Builder buildRequest(MediaType... mediaTypes)

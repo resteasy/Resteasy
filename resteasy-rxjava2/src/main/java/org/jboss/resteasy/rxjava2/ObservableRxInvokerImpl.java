@@ -14,9 +14,12 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.SyncInvoker;
 import javax.ws.rs.core.GenericType;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.sse.InboundSseEvent;
 import javax.ws.rs.sse.SseEventSource;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
@@ -189,9 +192,119 @@ public class ObservableRxInvokerImpl implements ObservableRxInvoker
       return eventSourceToObservable(getEventSource(), responseType, name, entity, getAccept());
    }
 
+   @Override
+   public CompletionStage<Response> getResponse(Class<?> responseType) {
+      return eventSourceToResponse(getEventSource(true), responseType, "GET", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> getResponse(GenericType<?> genericType) {
+      return eventSourceToResponse(getEventSource(true), genericType, "GET", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> putResponse(Entity<?> entity, Class<?> responseType) {
+      return eventSourceToResponse(getEventSource(true), responseType, "PUT", entity, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> putResponse(Entity<?> entity, GenericType<?> genericType) {
+      return eventSourceToResponse(getEventSource(true), genericType, "PUT", entity, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> postResponse(Entity<?> entity, Class<?> responseType) {
+      return eventSourceToResponse(getEventSource(true), responseType, "POST", entity, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> postResponse(Entity<?> entity, GenericType<?> genericType) {
+      return eventSourceToResponse(getEventSource(true), genericType, "POST", entity, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> deleteResponse(Class<?> responseType) {
+      return eventSourceToResponse(getEventSource(true), responseType, "DELETE", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> deleteResponse(GenericType<?> genericType) {
+      return eventSourceToResponse(getEventSource(true), genericType, "DELETE", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> headResponse() {
+      return eventSourceToResponse(getEventSource(true), String.class, "HEAD", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> optionsResponse(Class<?> responseType) {
+      return eventSourceToResponse(getEventSource(true), responseType, "OPTIONS", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> optionsResponse(GenericType<?> genericType) {
+      return eventSourceToResponse(getEventSource(true), genericType, "OPTIONS", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> traceResponse(Class<?> responseType) {
+      return eventSourceToResponse(getEventSource(true), responseType, "TRACE", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> traceResponse(GenericType<?> genericType) {
+      return eventSourceToResponse(getEventSource(true), genericType, "TRACE", null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> methodResponse(String name, Class<?> responseType) {
+      return eventSourceToResponse(getEventSource(true), responseType, name, null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> methodResponse(String name, GenericType<?> genericType) {
+      return eventSourceToResponse(getEventSource(true), genericType, name, null, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> methodResponse(String name, Entity<?> entity, Class<?> responseType) {
+      return eventSourceToResponse(getEventSource(true), responseType, name, entity, getAccept());
+   }
+
+   @Override
+   public CompletionStage<Response> methodResponse(String name, Entity<?> entity, GenericType<?> genericType) {
+      return eventSourceToResponse(getEventSource(true), genericType, name, entity, getAccept());
+   }
+
    ///////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-   private <T> Observable<T> eventSourceToObservable(SseEventSourceImpl sseEventSource, Class<T> clazz, String verb, Entity<?> entity, MediaType[] mediaTypes) {
+   private <T> CompletableFuture<Response> eventSourceToResponse(SseEventSourceImpl sseEventSource, Class<T> clazz, String verb, Entity<?> entity, MediaType[] mediaTypes)
+   {
+      Observable<T> flowable = eventSourceToObservable(sseEventSource, false, clazz, verb, entity, mediaTypes);
+      return CompletableFuture.supplyAsync(
+            () -> {
+               Response originalResponse = sseEventSource.getResponse();
+               return Response.fromResponse(originalResponse).entity(flowable).build();
+            });
+   }
+
+   private <T> CompletableFuture<Response> eventSourceToResponse(SseEventSourceImpl sseEventSource, GenericType<T> type, String verb, Entity<?> entity, MediaType[] mediaTypes)
+   {
+      Observable<T> flowable = eventSourceToObservable(sseEventSource, false, type, verb, entity, mediaTypes);
+      return CompletableFuture.supplyAsync(
+               () -> {
+                  Response originalResponse = sseEventSource.getResponse();
+                  return Response.fromResponse(originalResponse).entity(flowable).build();
+               });
+   }
+
+   private <T> Observable<T> eventSourceToObservable(SseEventSourceImpl sseEventSource, Class<T> clazz, String verb, Entity<?> entity, MediaType[] mediaTypes)
+   {
+      return eventSourceToObservable(sseEventSource, true, clazz, verb, entity, mediaTypes);
+   }
+
+   private <T> Observable<T> eventSourceToObservable(SseEventSourceImpl sseEventSource, boolean open, Class<T> clazz, String verb, Entity<?> entity, MediaType[] mediaTypes) {
       Observable<T> observable = Observable.create(
             new ObservableOnSubscribe<T>() {
 
@@ -204,17 +317,41 @@ public class ObservableRxInvokerImpl implements ObservableRxInvoker
                      },
                      (Throwable t) -> emitter.onError(t),
                      () -> emitter.onComplete());
-                  synchronized (monitor) {
-                     if (!sseEventSource.isOpen()) {
-                        sseEventSource.open(null, verb, entity, mediaTypes);
+                  synchronized (monitor)
+                  {
+                     if (!sseEventSource.isOpen())
+                     {
+                        try
+                        {
+                           sseEventSource.open(null, verb, entity, mediaTypes);
+                        }
+                        catch (IllegalStateException e)
+                        {
+                           // Ignore
+                        }
                      }
                   }
                }
             });
+      synchronized (monitor)
+      {
+         if (!open)
+         {
+            if (!sseEventSource.isConnected())
+            {
+               sseEventSource.connect(verb, entity, mediaTypes);
+            }
+         }
+      }
       return observable;
    }
 
    private <T> Observable<T> eventSourceToObservable(SseEventSourceImpl sseEventSource, GenericType<T> type, String verb, Entity<?> entity, MediaType[] mediaTypes)
+   {
+      return eventSourceToObservable(sseEventSource, true, type, verb, entity, mediaTypes);
+   }
+
+   private <T> Observable<T> eventSourceToObservable(SseEventSourceImpl sseEventSource, boolean open, GenericType<T> type, String verb, Entity<?> entity, MediaType[] mediaTypes)
    {
       Observable<T> observable = Observable.create(
             new ObservableOnSubscribe<T>() {
@@ -229,15 +366,37 @@ public class ObservableRxInvokerImpl implements ObservableRxInvoker
                   {
                      if (!sseEventSource.isOpen())
                      {
-                        sseEventSource.open(null, verb, entity, mediaTypes);
+                        try
+                        {
+                           sseEventSource.open(null, verb, entity, mediaTypes);
+                        }
+                        catch (IllegalStateException e)
+                        {
+                           // Ignore
+                        }
                      }
                   }
                }
             });
+      synchronized (monitor)
+      {
+         if (!open)
+         {
+            if (!sseEventSource.isConnected())
+            {
+               sseEventSource.connect(verb, entity, mediaTypes);
+            }
+         }
+      }
       return observable;
    }
 
    private SseEventSourceImpl getEventSource()
+   {
+      return getEventSource(false);
+   }
+
+   private SseEventSourceImpl getEventSource(boolean getResponse)
    {
       SourceBuilder builder = (SourceBuilder) SseEventSource.target(syncInvoker.getTarget());
       if (executorService != null)
@@ -246,6 +405,10 @@ public class ObservableRxInvokerImpl implements ObservableRxInvoker
       }
       SseEventSourceImpl sseEventSource = (SseEventSourceImpl) builder.build();
       sseEventSource.setAlwaysReconnect(false);
+      if (getResponse)
+      {
+         sseEventSource.register(new CompletableFuture<Response>());
+      }
       return sseEventSource;
    }
 

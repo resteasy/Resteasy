@@ -2,9 +2,11 @@ package org.jboss.resteasy.rxjava2;
 
 import javax.ws.rs.client.RxInvoker;
 
+import org.jboss.resteasy.client.jaxrs.RxInvokerExt;
+
 import io.reactivex.Observable;
 
-public interface ObservableRxInvoker extends RxInvoker<Observable<?>>
+public interface ObservableRxInvoker extends RxInvoker<Observable<?>>, RxInvokerExt
 {
 
 }
