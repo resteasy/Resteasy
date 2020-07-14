@@ -84,6 +84,10 @@ public class RestClientDelegateBean implements Bean<Object>, PassivationCapable 
 
     private final Optional<String> configKey;
 
+    private final Map<String, Integer> configProperties = new HashMap<>();
+
+    private volatile boolean readConfig = false;
+
     RestClientDelegateBean(final Class<?> proxyType, final BeanManager beanManager, final Optional<String> baseUri, final Optional<String> configKey) {
         this.proxyType = proxyType;
         this.beanManager = beanManager;
@@ -322,16 +326,21 @@ public class RestClientDelegateBean implements Bean<Object>, PassivationCapable 
     }
 
     private Map<String, Integer> getConfigProperties() {
-
-        Map<String, Integer> configProperties = new HashMap<>();
-        // fill with configKey properites
-        if (configKey.isPresent()) {
-            String configKeyProperty = String.format(PROPERTY_PREFIX, configKey.get());
-            getConfigProperties(configKeyProperty, configProperties);
+        if (readConfig) {
+            return configProperties;
         }
-        String property = String.format(PROPERTY_PREFIX, proxyType.getName());
-        // override with FQN properties
-        getConfigProperties(property, configProperties);
+        synchronized (this) {
+            configProperties.clear();
+            // fill with configKey properites
+            if (configKey.isPresent()) {
+                String configKeyProperty = String.format(PROPERTY_PREFIX, configKey.get());
+                getConfigProperties(configKeyProperty, configProperties);
+            }
+            String property = String.format(PROPERTY_PREFIX, proxyType.getName());
+            // override with FQN properties
+            getConfigProperties(property, configProperties);
+            readConfig = true;
+        }
         return configProperties;
     }
 
