@@ -21,24 +21,26 @@ public class AbstractJsonBindingProvider extends JsonBindingProvider {
 
    @Context
    javax.ws.rs.ext.Providers providers;
+
    private static Jsonb jsonbObj = null;
 
-   protected Jsonb getJsonb(Class<?> type) {
-      ContextResolver<Jsonb> contextResolver = providers.getContextResolver(Jsonb.class, MediaType.APPLICATION_JSON_TYPE);
-      if (contextResolver != null)
-      {
-         return contextResolver.getContext(type);
-      } else
-      {
-         if (jsonbObj == null)
-         {
+    protected Jsonb getJsonb(Class<?> type) {
+        ContextResolver<Jsonb> contextResolver = providers.getContextResolver(Jsonb.class, MediaType.APPLICATION_JSON_TYPE);
+        if (contextResolver != null) {
+            jsonbObj = contextResolver.getContext(type);
+            if (jsonbObj != null) {
+                return jsonbObj;
+            }
+        }
+
+        if (jsonbObj == null) {
             JsonProviderImpl jProviderImpl = new JsonProviderImpl();
             JsonBindingBuilder jbBuilder = new JsonBindingBuilder();
             jsonbObj = jbBuilder.withProvider(jProviderImpl).build();
-         }
-         return jsonbObj;
-      }
-   }
+        }
+        return jsonbObj;
+
+    }
 
    public static Charset getCharset(final MediaType mediaType) {
       return Charset.forName("utf-8");
