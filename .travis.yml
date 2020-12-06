@@ -7,8 +7,8 @@ language: java
 jdk:
   - openjdk8
 env:
-  - SERVER_VERSION=20.0.1.Final ELYTRON=true
-  - SERVER_VERSION=20.0.1.Final STANDALONE_MICROPROFILE=true
+  - SERVER_VERSION=21.0.0.Beta1 ELYTRON=true
+  - SERVER_VERSION=21.0.0.Beta1 STANDALONE_MICROPROFILE=true
 jobs:
 addons:
   hosts:
