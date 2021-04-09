@@ -96,6 +96,26 @@ public class CompletionStageResponseTest {
    }
 
    /**
+    * @tpTestDetails Resource method returns CompletableFuture<String>.
+    * @tpSince RESTEasy 4.7
+    */
+   @Test
+   public void testCompletabeFutureText() throws Exception
+   {
+      Invocation.Builder request = client.target(generateURL("/cftext")).request();
+      Response response = request.get();
+      String entity = response.readEntity(String.class);
+      Assert.assertEquals(200, response.getStatus());
+      Assert.assertEquals(CompletionStageResponseResource.HELLO, entity);
+
+      // make sure the completion callback was called with no error
+      request = client.target(generateURL("/callback-called-no-error?p=cftext")).request();
+      response = request.get();
+      Assert.assertEquals(200, response.getStatus());
+      response.close();
+   }
+
+   /**
     * @tpTestDetails Resource method returns CompletionStage<Response>.
     * Response has MediaType "text/plain" overriding @Produces("text/xxx").
     * @tpSince RESTEasy 3.5
