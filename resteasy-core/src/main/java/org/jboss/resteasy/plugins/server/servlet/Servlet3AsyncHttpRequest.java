@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -39,7 +40,11 @@ public class Servlet3AsyncHttpRequest extends HttpServletInputMessage
 {
    protected HttpServletResponse response;
    protected ResteasyAsynchronousContext asynchronousContext;
-   protected ScheduledExecutorService asyncScheduler; // this is to get around TCK tests that call setTimeout in a separate thread which is illegal.
+
+   private static final int SCHEDULER_MIN_POOL_SIZE = Integer
+         .getInteger(ResteasyContextParameters.RESTEASY_ASYNC_TIMEOUT_SCHEDULER_MIN_POOL_SIZE, 1); //default to 1 because of https://bugs.openjdk.java.net/browse/JDK-8129861
+
+   private static ScheduledExecutorService asyncScheduler = Executors.newScheduledThreadPool(SCHEDULER_MIN_POOL_SIZE); // this is to get around TCK tests that call setTimeout in a separate thread which is illegal.
 
    public Servlet3AsyncHttpRequest(final HttpServletRequest httpServletRequest, final HttpServletResponse response, final ServletContext servletContext, final HttpResponse httpResponse, final ResteasyHttpHeaders httpHeaders, final ResteasyUriInfo uriInfo, final String s, final SynchronousDispatcher synchronousDispatcher)
    {
