@@ -97,6 +97,12 @@
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-core</artifactId>
         </dependency>
+        <!-- Required JSON-B implementation for testing the client -->
+        <dependency>
+            <groupId>org.eclipse</groupId>
+            <artifactId>yasson</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <dependency>
             <groupId>org.jboss.weld.se</groupId>
@@ -106,6 +112,13 @@
         <dependency>
             <groupId>org.glassfish</groupId>
             <artifactId>jakarta.el</artifactId>
+        </dependency>
+
+        <!-- Required JSON-P implementation for testing the client -->
+        <dependency>
+            <groupId>org.glassfish</groupId>
+            <artifactId>jakarta.json</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <dependency>

@@ -31,17 +31,21 @@
             <version>${project.version}</version>
             <scope>provided</scope>
         </dependency>
+        <!-- The default implementation for JSON-P -->
         <dependency>
             <groupId>org.glassfish</groupId>
             <artifactId>jakarta.json</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>jakarta.json.bind</groupId>
             <artifactId>jakarta.json.bind-api</artifactId>
         </dependency>
+        <!-- The default implementation for JSON-B -->
         <dependency>
             <groupId>org.eclipse</groupId>
             <artifactId>yasson</artifactId>
+            <optional>true</optional>
         </dependency>
         <dependency>
             <groupId>org.jboss.logging</groupId>
