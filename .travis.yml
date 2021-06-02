@@ -1,9 +1,14 @@
+before_install:
+ - if [ "$TRAVIS_ARCH" = "ppc64le" ]; then sudo apt update; sudo apt install maven ; mvn -version; fi
 install:
  - mvn -B clean; java -version
 script:
  - travis_wait 60 mvn -B -Ptravis,jboss-repository -fae -Dserver.version=$SERVER_VERSION ${ELYTRON:+-Delytron} install
 
 language: java
+arch:
+  - amd64
+  - ppc64le
 jdk:
   - openjdk8
 env:
