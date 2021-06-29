@@ -5,6 +5,7 @@ import javax.ws.rs.core.Feature;
 import javax.ws.rs.core.FeatureContext;
 import javax.ws.rs.ext.Provider;
 
+import io.smallrye.context.impl.SmallRyeThreadContextStorageDeclaration;
 import org.eclipse.microprofile.context.spi.ContextManagerProvider;
 import org.jboss.resteasy.core.ResteasyContext;
 import org.jboss.resteasy.spi.Dispatcher;
@@ -12,6 +13,12 @@ import org.jboss.resteasy.spi.Dispatcher;
 @Provider
 public class ContextFeature implements Feature
 {
+   /* smallrye context 1.2.0+ requires an instance of this to
+   declare that you will need a custom ThreadLocal.
+ */
+   private final SmallRyeThreadContextStorageDeclaration storageDecl =
+           new SmallRyeThreadContextStorageDeclaration();
+
    @Override
    public boolean configure(FeatureContext context)
    {

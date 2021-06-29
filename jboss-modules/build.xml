@@ -98,6 +98,7 @@
             <maven-resource group="org.jboss.resteasy" artifact="resteasy-context-propagation"/>
             <maven-resource group="io.smallrye" artifact="smallrye-context-propagation"/>
             <maven-resource group="io.smallrye" artifact="smallrye-context-propagation-api"/>
+            <maven-resource group="io.smallrye" artifact="smallrye-context-propagation-storage"/>
             <maven-resource group="jakarta.enterprise" artifact="jakarta.enterprise.cdi-api"/>
             <maven-resource group="org.eclipse.microprofile.context-propagation" artifact="microprofile-context-propagation-api"/>
         </module-def>
