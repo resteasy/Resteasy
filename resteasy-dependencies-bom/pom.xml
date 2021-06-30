@@ -62,7 +62,7 @@
         <version.jakarta.json-api>1.1.6</version.jakarta.json-api>
         <version.jakarta.json.bind-api>2.0.0</version.jakarta.json.bind-api>
         <version.jakarta.validation-api>3.0.0</version.jakarta.validation-api>
-        <version.javax.ws.rs-api>3.0.0.Final-SNAPSHOT</version.javax.ws.rs-api>
+        <version.javax.ws.rs-api>1.0.0.Final</version.javax.ws.rs-api>
         <version.junit>4.13.1</version.junit>
         <version.log4j>2.13.3</version.log4j>
         <version.stephenc.jcip.jcip-annotations>1.0-1</version.stephenc.jcip.jcip-annotations>
@@ -257,7 +257,7 @@
             </dependency>
 
             <dependency>
-                <groupId>org.jboss.spec.jakarta.ws.rs</groupId>
+                <groupId>org.jboss.spec.javax.ws.rs</groupId>
                 <artifactId>jboss-jaxrs-api_3.0_spec</artifactId>
                 <version>${version.javax.ws.rs-api}</version>
             </dependency>

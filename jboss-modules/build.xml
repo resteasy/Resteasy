@@ -88,7 +88,7 @@
 
         <!-- already present in wildfly -->
         <module-def name="jakarta.ws.rs.api">
-            <maven-resource group="org.jboss.spec.jakarta.ws.rs" artifact="jboss-jaxrs-api_3.0_spec"/>
+            <maven-resource group="org.jboss.spec.javax.ws.rs" artifact="jboss-jaxrs-api_3.0_spec"/>
         </module-def>
 
         <module-def name="org.jboss.resteasy.resteasy-atom-provider">
