@@ -107,6 +107,7 @@
         <version.io.projectreactor>2020.0.8</version.io.projectreactor>
 
         <version.asyncutil>0.1.0</version.asyncutil>
+        <version.arquillian.jetty>1.0.0.CR3</version.arquillian.jetty>
     </properties>
 
     <dependencyManagement>
@@ -994,6 +995,12 @@
                 <groupId>com.ibm.async</groupId>
                 <artifactId>asyncutil</artifactId>
                 <version>${version.asyncutil}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.jboss.arquillian.container</groupId>
+                <artifactId>arquillian-jetty-embedded-9</artifactId>
+                <version>${version.arquillian.jetty}</version>
+                <scope>test</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

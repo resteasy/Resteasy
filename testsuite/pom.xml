@@ -150,6 +150,7 @@
             <modules>
                 <module>arquillian-utils</module>
                 <module>unit-tests</module>
+                <module>integration-tests-jetty</module>
                 <module>integration-tests</module>
                 <module>integration-tests-spring</module>
                 <module>integration-tests-spring-web</module>
