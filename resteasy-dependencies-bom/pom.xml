@@ -48,7 +48,7 @@
         <version.org.apache.maven>3.3.9</version.org.apache.maven> <!-- Used to download aether-provider -->
         <version.org.bouncycastle>1.69</version.org.bouncycastle>
         <version.org.eclipse.aether>1.1.0</version.org.eclipse.aether>
-        <version.org.eclipse.jetty>9.4.39.v20210325</version.org.eclipse.jetty>
+        <version.org.eclipse.jetty>9.4.41.v20210516</version.org.eclipse.jetty>
         <version.org.eclipse.yasson>1.0.9</version.org.eclipse.yasson>
         <version.com.github.tomakehurst.wiremock>2.20.0</version.com.github.tomakehurst.wiremock>
         <version.org.glassfish.jakarta.el>3.0.3</version.org.glassfish.jakarta.el>
