@@ -8,19 +8,21 @@ import java.util.regex.Pattern;
 
 public class after {
     public static void main(String[] args) throws Exception {
-        Path path = Paths.get("reference/en/en-US/modules/RESTEasy_Spring_Integration.xml");
+        final String baseDir = args == null ? "." : args[0];
+
+        Path path = Paths.get(baseDir, "reference", "en", "en-US", "modules", "RESTEasy_Spring_Integration.xml");
         Charset charset = StandardCharsets.UTF_8;
         String content = new String(Files.readAllBytes(path), charset);
         String token = "_SPRING_VER_";
-        String ver = getVer();
+        String ver = getVer(baseDir);
 
         // restore
         content = content.replaceAll(ver, token);
         Files.write(path, content.getBytes(charset));
     }
 
-    public static String getVer() throws Exception {
-        Path path = Paths.get("../resteasy-dependencies-bom/pom.xml");
+    public static String getVer(final String dir) throws Exception {
+        Path path = Paths.get(dir, "..", "resteasy-dependencies-bom", "pom.xml");
         Charset charset = StandardCharsets.UTF_8;
 
         String content = new String(Files.readAllBytes(path), charset);

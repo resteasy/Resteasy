@@ -3,12 +3,15 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 
     <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.jboss.resteasy</groupId>
+        <artifactId>resteasy-jaxrs-all</artifactId>
+        <version>4.7.0-SNAPSHOT</version>
+    </parent>
 
-    <groupId>org.jboss.resteasy</groupId>
-    <artifactId>resteasy-reference-guide-${translation}</artifactId>
-    <version>4.7.0-SNAPSHOT</version>
+    <artifactId>resteasy-reference-guide-en-US</artifactId>
     <packaging>jdocbook</packaging>
-    <name>RESTEasy Reference Guide (${translation})</name>
+    <name>RESTEasy Reference Guide (en-US)</name>
     <description/>
     <properties>
         <jbang.ver>0.67.3</jbang.ver>
@@ -53,9 +56,9 @@
                 <configuration>
                     <sourceDocumentName>master.xml</sourceDocumentName>
                     <masterTranslation>en-US</masterTranslation>
-                    <sourceDirectory>reference/en</sourceDirectory>
+                    <sourceDirectory>${project.basedir}/reference/en</sourceDirectory>
                     <imageResource>
-                        <directory>reference/en</directory>
+                        <directory>${project.basedir}/reference/en</directory>
                         <includes>
                             <include>images/*</include>
                         </includes>
@@ -103,6 +106,7 @@
             <plugin>
                 <groupId>dev.jbang</groupId>
                 <artifactId>jbang-maven-plugin</artifactId>
+                <version>0.0.7</version>
                 <executions>
                     <execution>
                         <id>replace</id>
@@ -112,7 +116,10 @@
                         </goals>
                         <configuration>
                             <jbangVersion>${jbang.ver}</jbangVersion>
-                            <script>scripts/before.java</script>
+                            <script>${project.basedir}/scripts/before.java</script>
+                            <args>
+                                <arg>${project.basedir}</arg>
+                            </args>
                         </configuration>
                     </execution>
                     <execution>
@@ -123,7 +130,10 @@
                         </goals>
                         <configuration>
                             <jbangVersion>${jbang.ver}</jbangVersion>
-                            <script>scripts/after.java</script>
+                            <script>${project.basedir}/scripts/after.java</script>
+                            <args>
+                                <arg>${project.basedir}</arg>
+                            </args>
                         </configuration>
                     </execution>
                 </executions>

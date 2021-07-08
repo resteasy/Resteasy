@@ -216,6 +216,18 @@
           </build>
       </profile>
       <profile>
+          <id>release</id>
+          <activation>
+              <property>
+                  <name>release</name>
+              </property>
+          </activation>
+          <modules>
+              <module>distribution</module>
+              <module>docbook</module>
+          </modules>
+      </profile>
+      <profile>
           <id>jboss-repository</id>
           <repositories>
               <repository>

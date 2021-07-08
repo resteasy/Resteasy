@@ -9,9 +9,11 @@ import java.util.regex.Pattern;
 class before {
 
     public static void main(String... args) throws Exception {
-        String ver = getVer();
+        final String baseDir = args == null ? "." : args[0];
 
-        Path path = Paths.get("reference/en/en-US/modules/RESTEasy_Spring_Integration.xml");
+        String ver = getVer(baseDir);
+
+        Path path = Paths.get(baseDir, "reference", "en", "en-US", "modules", "RESTEasy_Spring_Integration.xml");
         Charset charset = StandardCharsets.UTF_8;
 
         String content = new String(Files.readAllBytes(path), charset);
@@ -22,8 +24,8 @@ class before {
         Files.write(path, content.getBytes(charset));
     }
 
-    public static String getVer() throws Exception {
-        Path path = Paths.get("../resteasy-dependencies-bom/pom.xml");
+    public static String getVer(String dir) throws Exception {
+        Path path = Paths.get(dir, "..", "resteasy-dependencies-bom", "pom.xml");
         Charset charset = StandardCharsets.UTF_8;
 
         String content = new String(Files.readAllBytes(path), charset);
