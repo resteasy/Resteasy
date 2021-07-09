@@ -133,6 +133,8 @@ public class SseEventSourceImpl implements SseEventSource
       this.reconnectDelay = reconnectDelay;
       this.alwaysReconnect = alwaysReconnect;
 
+      Runnable onCompleteCallBack = () -> onCompleteConsumers.forEach(Runnable::run);
+
       if (executor == null)
       {
          ScheduledExecutorService scheduledExecutor = null;
@@ -141,17 +143,17 @@ public class SseEventSourceImpl implements SseEventSource
             scheduledExecutor = ((ResteasyWebTarget) target).getResteasyClient().getScheduledExecutor();
          }
          if (name != null) {
-            this.sseEventSourceScheduler = new SseEventSourceScheduler(scheduledExecutor, name);
+            this.sseEventSourceScheduler = new SseEventSourceScheduler(scheduledExecutor, name, onCompleteCallBack);
          } else {
-            this.sseEventSourceScheduler = new SseEventSourceScheduler(scheduledExecutor, String.format("sse-event-source(%s)", target.getUri()));
+            this.sseEventSourceScheduler = new SseEventSourceScheduler(scheduledExecutor, String.format("sse-event-source(%s)", target.getUri()), onCompleteCallBack);
          }
       }
       else
       {
          if (name != null) {
-            this.sseEventSourceScheduler = new SseEventSourceScheduler(executor, name);
+            this.sseEventSourceScheduler = new SseEventSourceScheduler(executor, name, onCompleteCallBack);
          } else {
-            this.sseEventSourceScheduler = new SseEventSourceScheduler(executor, String.format("sse-event-source(%s)", target.getUri()));
+            this.sseEventSourceScheduler = new SseEventSourceScheduler(executor, String.format("sse-event-source(%s)", target.getUri()), onCompleteCallBack);
          }
       }
 
@@ -273,7 +275,6 @@ public class SseEventSourceImpl implements SseEventSource
          }
       }
       sseEventSourceScheduler.shutdownNow();
-      onCompleteConsumers.forEach(Runnable::run);
    }
 
    private class EventHandler implements Runnable

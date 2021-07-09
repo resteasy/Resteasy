@@ -51,13 +51,28 @@ class SseEventSourceScheduler
 
    private final AtomicBoolean closed;
 
-   SseEventSourceScheduler(final ScheduledExecutorService scheduledExecutorService, final String threadName)
+   SseEventSourceScheduler(final ScheduledExecutorService scheduledExecutorService, final String threadName, final Runnable onCompleteCallback)
    {
       this.scheduledExecutorService = scheduledExecutorService == null
             ? Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory(threadName))
             : scheduledExecutorService;
       this.shutdownExecutorService = scheduledExecutorService == null;
-      this.phaser = new Phaser(1);
+      this.phaser = new Phaser(1)
+      {
+         @Override
+         protected boolean onAdvance(int phase, int registeredParties)
+         {
+            boolean terminated = super.onAdvance(phase, registeredParties);
+            if (terminated)
+            {
+               if (onCompleteCallback != null)
+               {
+                  onCompleteCallback.run();
+               }
+            }
+            return terminated;
+         }
+      };
       this.closed = new AtomicBoolean(false);
    }
 
