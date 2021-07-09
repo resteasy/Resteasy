@@ -442,9 +442,14 @@ public class SseEventSourceImpl implements SseEventSource
          {
             reconnectDelay = event.getReconnectDelay();
          }
-         onEventConsumers.forEach(consumer -> {
-            consumer.accept(event);
-         });
+         try {
+            onEventConsumers.forEach(consumer -> {
+               consumer.accept(event);
+            });
+         } catch (Throwable er) {
+            // If something goes wrong during SSE event processing.
+            onUnrecoverableError(er);
+         }
       }
 
       private Invocation.Builder buildRequest(MediaType... mediaTypes)
