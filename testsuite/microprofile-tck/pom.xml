@@ -113,9 +113,16 @@
     </dependency>
 
     <dependency>
-      <groupId>javax.json.bind</groupId>
-      <artifactId>javax.json.bind-api</artifactId>
-      <version>1.0</version>
+      <groupId>jakarta.json.bind</groupId>
+      <artifactId>jakarta.json.bind-api</artifactId>
+      <scope>test</scope>
+    </dependency>
+
+    <!-- Required JSON-B implementation for testing the client -->
+    <dependency>
+      <groupId>org.eclipse</groupId>
+      <artifactId>yasson</artifactId>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
