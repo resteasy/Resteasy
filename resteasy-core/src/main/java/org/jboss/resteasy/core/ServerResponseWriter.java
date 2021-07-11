@@ -565,13 +565,11 @@ public class ServerResponseWriter
       @Override
       public int compareTo(SortableMediaType o)
       {
-         if (o.isCompatible(this))
-         {
-            if (o.equals(this))
-            {
-               return 0;
-            }
-            return o.equals(selectMostSpecific(o, this)) ? 1 : -1;
+         if (wildcardCount(o) > wildcardCount(this)) {
+             return -1;
+         }
+         if (wildcardCount(o) < wildcardCount(this)) {
+             return 1;
          }
          if (o.q < this.q)
          {
@@ -597,50 +595,19 @@ public class ServerResponseWriter
          if (this.writerType.isAssignableFrom(o.writerType)) return 1;
          return 0;
       }
+
+      private int wildcardCount(SortableMediaType t) {
+         int count = 0;
+         if (t.getType().equals("*")) {
+             count++;
+         }
+         if (t.getSubtype().equals("*")) {
+             count++;
+         }
+         return count;
+      }
    }
 
-   /**
-    * m1, m2 are compatible
-    */
-   private static SortableMediaType selectMostSpecific(SortableMediaType m1, SortableMediaType m2)
-   {
-      if (m1.getType().equals("*"))
-      {
-         if (m2.getType().equals("*"))
-         {
-            if (m1.getSubtype().equals("*"))
-            {
-               return m2; // */* <= */?
-            }
-            else
-            {
-               return m1; // */st > */?
-            }
-         }
-         else
-         {
-            return m2; // */? < t/?
-         }
-      }
-      else
-      {
-         if (m2.getType().equals("*"))
-         {
-            return m1; // t/? > */?
-         }
-         else
-         {
-            if (m1.getSubtype().equals("*"))
-            {
-               return m2; // t/* <= t/?
-            }
-            else
-            {
-               return m1; // t/st >= t/?
-            }
-         }
-      }
-   }
 
    private static SortableMediaType mostSpecific(MediaType p, Class<?> wtp, MediaType a, Class<?> wta)
    {
