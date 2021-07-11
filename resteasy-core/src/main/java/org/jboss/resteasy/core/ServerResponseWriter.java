@@ -573,20 +573,19 @@ public class ServerResponseWriter
             }
             return o.equals(selectMostSpecific(o, this)) ? 1 : -1;
          }
+         if ((o.q * o.qs) < (this.q * this.qs))
+         {
+            return -1;
+         }
+         if ((o.q * o.qs) > (this.q * this.qs))
+         {
+            return 1;
+         }
          if (o.q < this.q)
          {
             return -1;
          }
          if (o.q > this.q)
-         {
-            return 1;
-         }
-         // zzzz.q == this.q
-         if (o.qs < this.qs)
-         {
-            return -1;
-         }
-         if (o.qs > this.qs)
          {
             return 1;
          }
