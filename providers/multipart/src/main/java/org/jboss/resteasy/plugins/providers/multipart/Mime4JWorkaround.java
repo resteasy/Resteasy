@@ -33,6 +33,8 @@ import org.apache.james.mime4j.storage.StorageProvider;
 import org.apache.james.mime4j.storage.ThresholdStorageProvider;
 import org.apache.james.mime4j.stream.BodyDescriptorBuilder;
 import org.apache.james.mime4j.stream.MimeConfig;
+import org.jboss.resteasy.plugins.providers.multipart.i18n.LogMessages;
+import org.jboss.resteasy.spi.config.Configuration;
 import org.jboss.resteasy.spi.config.ConfigurationFactory;
 
 /**
@@ -40,6 +42,9 @@ import org.jboss.resteasy.spi.config.ConfigurationFactory;
  * Alter said code to use Mime4JWorkaroundBinaryEntityBuilder instead of EntityBuilder.
  */
 public class Mime4JWorkaround {
+   static final String MEM_THRESHOLD_PROPERTY = "org.jboss.resteasy.plugins.providers.multipart.memoryThreshold";
+   static final int DEFAULT_MEM_THRESHOLD = 1024;
+
     /**
      * This is a rough copy of DefaultMessageBuilder.parseMessage() modified to use a Mime4JWorkaround as the contentHandler instead
      * of an EntityBuilder.
@@ -64,7 +69,7 @@ public class Mime4JWorkaround {
                 storageProvider = DefaultStorageProvider.getInstance();
             } else {
                 StorageProvider backend = new CustomTempFileStorageProvider();
-                storageProvider = new ThresholdStorageProvider(backend, 1024);
+                storageProvider = new ThresholdStorageProvider(backend, getMemThreshold());
             }
             BodyFactory bf = new StorageBodyFactory(storageProvider, mon);
 
@@ -82,6 +87,25 @@ public class Mime4JWorkaround {
         }
     }
 
+    static int getMemThreshold()
+    {
+       try
+       {
+          Configuration cfg = ConfigurationFactory.getInstance().getConfiguration();
+          int threshold = Integer.parseInt(cfg.getOptionalValue(MEM_THRESHOLD_PROPERTY, String.class).orElse(
+                Integer.toString(DEFAULT_MEM_THRESHOLD)));
+          if (threshold > -1)
+          {
+             return threshold;
+          }
+          LogMessages.LOGGER.debugf("Negative threshold, %s, specified. Using default value", threshold);
+       }
+       catch (Exception e)
+       {
+          LogMessages.LOGGER.debug("Exception caught parsing memory threshold. Using default value.", e);
+       }
+       return DEFAULT_MEM_THRESHOLD;
+    }
 
     /**
      * A custom TempFileStorageProvider that do no set deleteOnExit on temp files,

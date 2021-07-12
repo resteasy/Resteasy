@@ -54,6 +54,9 @@ import java.util.Optional;
 public class ManualClosingApacheHttpClient43Engine implements ApacheHttpClientEngine
 {
 
+   static final String FILE_UPLOAD_IN_MEMORY_THRESHOLD_PROPERTY =
+      "org.jboss.resteasy.client.jaxrs.engines.fileUploadInMemoryThreshold";
+
    /**
     * Used to build temp file prefix.
     */
@@ -123,39 +126,58 @@ public class ManualClosingApacheHttpClient43Engine implements ApacheHttpClientEn
 
    public ManualClosingApacheHttpClient43Engine()
    {
-      this.httpClient = createDefaultHttpClient();
-      this.allowClosingHttpClient = true;
+      this(null, null, true, null);
    }
 
    public ManualClosingApacheHttpClient43Engine(final HttpHost defaultProxy)
    {
-      this.defaultProxy = defaultProxy;
-      this.httpClient = createDefaultHttpClient();
-      this.allowClosingHttpClient = true;
+      this(null, null, true, defaultProxy);
    }
 
    public ManualClosingApacheHttpClient43Engine(final HttpClient httpClient)
    {
-      this.httpClient = httpClient;
-      this.allowClosingHttpClient = true;
+      this(httpClient, null, true, null);
    }
 
    public ManualClosingApacheHttpClient43Engine(final HttpClient httpClient, final boolean closeHttpClient)
    {
-      if (closeHttpClient && !(httpClient instanceof CloseableHttpClient))
+      this(httpClient, null, closeHttpClient, null);
+   }
+
+   public ManualClosingApacheHttpClient43Engine(final HttpClient httpClient,
+         final HttpContextProvider httpContextProvider)
+   {
+      this(httpClient, httpContextProvider, true, null);
+   }
+
+   private ManualClosingApacheHttpClient43Engine(final HttpClient httpClient,
+         final HttpContextProvider httpContextProvider, final boolean closeHttpClient, final HttpHost defaultProxy)
+   {
+      this.httpClient = httpClient != null ? httpClient : createDefaultHttpClient();
+      if (closeHttpClient && !(this.httpClient instanceof CloseableHttpClient))
       {
          throw new IllegalArgumentException(
                "httpClient must be a CloseableHttpClient instance in order for allowing engine to close it!");
       }
-      this.httpClient = httpClient;
-      this.allowClosingHttpClient = closeHttpClient;
-   }
-
-   public ManualClosingApacheHttpClient43Engine(final HttpClient httpClient, final HttpContextProvider httpContextProvider)
-   {
-      this.httpClient = httpClient;
       this.httpContextProvider = httpContextProvider;
-      this.allowClosingHttpClient = true;
+      this.allowClosingHttpClient = closeHttpClient;
+      this.defaultProxy = defaultProxy;
+
+      try
+      {
+         int threshold = Integer.parseInt(ConfigurationFactory.getInstance().getConfiguration()
+               .getOptionalValue(FILE_UPLOAD_IN_MEMORY_THRESHOLD_PROPERTY, String.class)
+               .orElse("1"));
+         if (threshold > -1)
+         {
+            this.fileUploadInMemoryThresholdLimit = threshold;
+         }
+         LogMessages.LOGGER.debugf("Negative threshold, %s, specified. Using default value", threshold);
+      }
+      catch (Exception e)
+      {
+         LogMessages.LOGGER.debug("Exception caught parsing memory threshold. Using default value.", e);
+      }
    }
 
    /**

@@ -11,8 +11,8 @@ import java.nio.charset.StandardCharsets;
  * @version $Revision: 1 $
  */
 public class HeaderFlushedOutputStream extends OutputStream {
-   private MultivaluedMap<String, Object> headers;
-   private OutputStream stream;
+   private final MultivaluedMap<String, Object> headers;
+   private final OutputStream stream;
    private boolean headersFlushed = false;
 
    public HeaderFlushedOutputStream(final MultivaluedMap<String, Object> headers,
