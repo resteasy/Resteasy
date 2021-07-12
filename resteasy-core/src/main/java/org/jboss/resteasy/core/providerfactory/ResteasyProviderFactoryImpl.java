@@ -1115,17 +1115,18 @@ public class ResteasyProviderFactoryImpl extends ResteasyProviderFactory impleme
    public <T> AsyncResponseProvider<T> getAsyncResponseProvider(Class<T> type)
    {
       Class asyncType = type;
-      AsyncResponseProvider<T> mapper = null;
-      while (mapper == null)
+      if (getAsyncResponseProviders() == null)
       {
-         if (asyncType == null)
-            break;
-         Map<Class<?>, AsyncResponseProvider> asyncResponseProviders = getAsyncResponseProviders();
-         if (asyncResponseProviders != null) mapper = asyncResponseProviders.get(asyncType);
-         if (mapper == null)
-            asyncType = asyncType.getSuperclass();
+         return null;
       }
-      return mapper;
+      for (Class<?> aClass : getAsyncResponseProviders().keySet())
+      {
+        if (aClass.isAssignableFrom(asyncType))
+        {
+           return getAsyncResponseProviders().get(aClass);
+        }
+      }
+      return null;
    }
 
    public <T> AsyncClientResponseProvider<T> getAsyncClientResponseProvider(Class<T> type)
