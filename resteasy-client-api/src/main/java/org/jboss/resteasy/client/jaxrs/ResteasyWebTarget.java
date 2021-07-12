@@ -53,7 +53,7 @@ public interface ResteasyWebTarget extends WebTarget
     * @param values values
     * @return web resource target
     */
-   ResteasyWebTarget queryParamNoTemplate(String name, Object... values) throws NullPointerException;
+   ResteasyWebTarget queryParamNoTemplate(String name, boolean isEncoded, Object... values) throws NullPointerException;
 
    /**
     * Will encode any '{}' characters and not treat them as template parameters.

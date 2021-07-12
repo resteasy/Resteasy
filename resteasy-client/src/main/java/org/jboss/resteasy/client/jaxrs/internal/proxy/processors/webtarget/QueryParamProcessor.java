@@ -14,22 +14,19 @@ import javax.ws.rs.client.WebTarget;
  */
 public class QueryParamProcessor extends AbstractWebTargetCollectionProcessor
 {
-   public QueryParamProcessor(final String paramName)
-   {
-      super(paramName);
-   }
+   private final boolean isEncoded;
 
-   public QueryParamProcessor(final String paramName, final Type type, final Annotation[] annotations, final ClientConfiguration config)
+   public QueryParamProcessor(final String paramName, final Type type, final Annotation[] annotations, final ClientConfiguration config, final boolean isEncoded)
    {
       super(paramName, type, annotations, config);
+
+      this.isEncoded = isEncoded;
    }
 
    @Override
    protected WebTarget apply(WebTarget target, Object... objects)
    {
       ResteasyWebTarget t = (ResteasyWebTarget)target;
-      return t.queryParamNoTemplate(paramName, objects);
+      return t.queryParamNoTemplate(paramName, isEncoded, objects);
    }
-
-
 }

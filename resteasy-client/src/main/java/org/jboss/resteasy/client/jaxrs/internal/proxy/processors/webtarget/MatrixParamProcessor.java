@@ -13,12 +13,6 @@ import javax.ws.rs.client.WebTarget;
  */
 public class MatrixParamProcessor extends AbstractWebTargetCollectionProcessor
 {
-
-   public MatrixParamProcessor(final String paramName)
-   {
-      super(paramName);
-   }
-
    public MatrixParamProcessor(final String paramName, final Type type, final Annotation[] annotations, final ClientConfiguration config)
    {
       super(paramName, type, annotations, config);

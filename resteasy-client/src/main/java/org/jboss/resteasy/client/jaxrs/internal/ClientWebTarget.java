@@ -143,7 +143,7 @@ public class ClientWebTarget implements ResteasyWebTarget
       client.abortIfClosed();
       if (resource == null) throw new NullPointerException(Messages.MESSAGES.resourceWasNull());
       UriBuilder copy = uriBuilder.clone().path(resource);
-      return  newInstance(client, copy, configuration);
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -152,7 +152,7 @@ public class ClientWebTarget implements ResteasyWebTarget
       client.abortIfClosed();
       if (method == null) throw new NullPointerException(Messages.MESSAGES.methodWasNull());
       UriBuilder copy = uriBuilder.clone().path(method);
-      return  newInstance(client, copy, configuration);
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -163,8 +163,7 @@ public class ClientWebTarget implements ResteasyWebTarget
       if (value == null) throw new NullPointerException(Messages.MESSAGES.valueWasNull());
       String val = configuration.toString(value);
       UriBuilder copy = uriBuilder.clone().resolveTemplate(name, val);
-      ClientWebTarget target = newInstance(client, copy, configuration);
-      return target;
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -173,16 +172,14 @@ public class ClientWebTarget implements ResteasyWebTarget
       client.abortIfClosed();
       if (templateValues == null) throw new NullPointerException(Messages.MESSAGES.templateValuesWasNull());
       if (templateValues.isEmpty()) return this;
-      Map<String, Object> vals = new HashMap<String, Object>();
+      Map<String, Object> vals = new HashMap<>();
       for (Map.Entry<String, Object> entry : templateValues.entrySet())
       {
          if (entry.getKey() == null || entry.getValue() == null) throw new NullPointerException(Messages.MESSAGES.templateValuesEntryWasNull());
-         String val = configuration.toString(entry.getValue());
-         vals.put(entry.getKey(), val);
+         vals.put(entry.getKey(), configuration.toString(entry.getValue()));
       }
       UriBuilder copy = uriBuilder.clone().resolveTemplates(vals);
-      ClientWebTarget target = newInstance(client, copy, configuration);
-      return target;
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -193,8 +190,7 @@ public class ClientWebTarget implements ResteasyWebTarget
       if (value == null) throw new NullPointerException(Messages.MESSAGES.valueWasNull());
       String val = configuration.toString(value);
       UriBuilder copy = uriBuilder.clone().resolveTemplate(name, val, encodeSlashInPath);
-      ClientWebTarget target = newInstance(client, copy, configuration);
-      return target;
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -205,8 +201,7 @@ public class ClientWebTarget implements ResteasyWebTarget
       if (value == null) throw new NullPointerException(Messages.MESSAGES.valueWasNull());
       String val = configuration.toString(value);
       UriBuilder copy = uriBuilder.clone().resolveTemplateFromEncoded(name, val);
-      ClientWebTarget target = newInstance(client, copy, configuration);
-      return target;
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -215,16 +210,14 @@ public class ClientWebTarget implements ResteasyWebTarget
       client.abortIfClosed();
       if (templateValues == null) throw new NullPointerException(Messages.MESSAGES.templateValuesWasNull());
       if (templateValues.isEmpty()) return this;
-      Map<String, Object> vals = new HashMap<String, Object>();
+      Map<String, Object> vals = new HashMap<>();
       for (Map.Entry<String, Object> entry : templateValues.entrySet())
       {
          if (entry.getKey() == null || entry.getValue() == null) throw new NullPointerException(Messages.MESSAGES.templateValuesEntryWasNull());
-         String val = configuration.toString(entry.getValue());
-         vals.put(entry.getKey(), val);
+         vals.put(entry.getKey(), configuration.toString(entry.getValue()));
       }
-      UriBuilder copy = uriBuilder.clone().resolveTemplatesFromEncoded(vals) ;
-      ClientWebTarget target = newInstance(client, copy, configuration);
-      return target;
+      UriBuilder copy = uriBuilder.clone().resolveTemplatesFromEncoded(vals);
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -233,16 +226,14 @@ public class ClientWebTarget implements ResteasyWebTarget
       client.abortIfClosed();
       if (templateValues == null) throw new NullPointerException(Messages.MESSAGES.templateValuesWasNull());
       if (templateValues.isEmpty()) return this;
-      Map<String, Object> vals = new HashMap<String, Object>();
+      Map<String, Object> vals = new HashMap<>();
       for (Map.Entry<String, Object> entry : templateValues.entrySet())
       {
          if (entry.getKey() == null || entry.getValue() == null) throw new NullPointerException(Messages.MESSAGES.templateValuesEntryWasNull());
-         String val = configuration.toString(entry.getValue());
-         vals.put(entry.getKey(), val);
+         vals.put(entry.getKey(), configuration.toString(entry.getValue()));
       }
-      UriBuilder copy = uriBuilder.clone().resolveTemplates(vals, encodeSlashInPath) ;
-      ClientWebTarget target = newInstance(client, copy, configuration);
-      return target;
+      UriBuilder copy = uriBuilder.clone().resolveTemplates(vals, encodeSlashInPath);
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -257,8 +248,7 @@ public class ClientWebTarget implements ResteasyWebTarget
       }
       else
       {
-         String[] stringValues = toStringValues(values);
-         copy.matrixParam(name, (Object[]) stringValues);
+         copy.matrixParam(name, (Object[]) toStringValues(values));
       }
       return newInstance(client, copy, configuration);
    }
@@ -285,8 +275,7 @@ public class ClientWebTarget implements ResteasyWebTarget
       }
       else
       {
-         String[] stringValues = toStringValues(values);
-         copy.queryParam(name, (Object[]) stringValues);
+         copy.queryParam(name, (Object[]) toStringValues(values));
       }
       return newInstance(client, copy, configuration);
    }
@@ -299,14 +288,13 @@ public class ClientWebTarget implements ResteasyWebTarget
       UriBuilder copy = uriBuilder.clone();
       for (Map.Entry<String, List<Object>> entry : parameters.entrySet())
       {
-         String[] stringValues = toStringValues(entry.getValue().toArray());
-         copy.queryParam(entry.getKey(), (Object[]) stringValues);
+         copy.queryParam(entry.getKey(), (Object[]) toStringValues(entry.getValue().toArray()));
       }
-      return  newInstance(client, copy, configuration);
+      return newInstance(client, copy, configuration);
    }
 
    @Override
-   public ResteasyWebTarget queryParamNoTemplate(String name, Object... values) throws NullPointerException
+   public ResteasyWebTarget queryParamNoTemplate(String name, boolean isEncoded, Object... values) throws NullPointerException
    {
       client.abortIfClosed();
       if (name == null) throw new NullPointerException(Messages.MESSAGES.nameWasNull());
@@ -316,7 +304,6 @@ public class ClientWebTarget implements ResteasyWebTarget
          values = (Object[]) values[0];
       }
 
-      String[] stringValues = toStringValues(values);
       ResteasyUriBuilder copy;
       if (uriBuilder instanceof ResteasyUriBuilder) {
          copy = (ResteasyUriBuilder)uriBuilder.clone();
@@ -324,8 +311,9 @@ public class ClientWebTarget implements ResteasyWebTarget
          copy = ResteasyUriBuilder.fromTemplate(uriBuilder.toTemplate());
       }
 
-      copy.clientQueryParam(name, (Object[]) stringValues);
-      return  newInstance(client, copy, configuration);
+      copy.clientQueryParam(name, isEncoded, (Object[]) toStringValues(values));
+
+      return newInstance(client, copy, configuration);
    }
 
    @Override
@@ -341,11 +329,7 @@ public class ClientWebTarget implements ResteasyWebTarget
       }
       for (Map.Entry<String, List<Object>> entry : parameters.entrySet())
       {
-         String[] stringValues = toStringValues(entry.getValue().toArray());
-         for (String val : stringValues)
-         {
-            copy.clientQueryParam(entry.getKey(), val);
-         }
+         copy.clientQueryParam(entry.getKey(), false, (Object[]) toStringValues(entry.getValue().toArray()));
       }
       return newInstance(client, copy, configuration);
    }

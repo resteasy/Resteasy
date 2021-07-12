@@ -117,10 +117,11 @@ public abstract class ResteasyUriBuilder extends UriBuilder
     * </ul>
     *
     * @param name  the name of the query parameter.
+    * @param isValueEncoded is the value already encoded?
     * @param values the value(s) of the query parameter.
     * @return Returns this instance to allow call chaining.
     */
-   public abstract UriBuilder clientQueryParam(String name, Object... values) throws IllegalArgumentException;
+   public abstract UriBuilder clientQueryParam(String name, boolean isValueEncoded, Object... values) throws IllegalArgumentException;
 
    public abstract String getHost();
 

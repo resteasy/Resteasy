@@ -15,11 +15,6 @@ import javax.ws.rs.client.WebTarget;
  */
 public abstract class AbstractWebTargetCollectionProcessor extends AbstractCollectionProcessor<WebTarget> implements WebTargetProcessor
 {
-   public AbstractWebTargetCollectionProcessor(final String paramName)
-   {
-      super(paramName);
-   }
-
    public AbstractWebTargetCollectionProcessor(final String paramName, final Type type, final Annotation[] annotations, final ClientConfiguration config)
    {
       super(paramName, type, annotations, config);
