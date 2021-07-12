@@ -12,6 +12,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.validation.ConstraintViolation;
 import javax.validation.ConstraintViolationException;
@@ -37,21 +38,21 @@ public abstract class ResteasyViolationException extends ConstraintViolationExce
 
    public static final String SUPPRESS_VIOLATION_PATH = "resteasy.validation.suppress.path";
 
-   private List<CloneableMediaType> accept;
+   private volatile List<CloneableMediaType> accept;
 
-   private Exception exception;
+   private volatile Exception exception;
 
-   private List<ResteasyConstraintViolation> propertyViolations;
+   private volatile List<ResteasyConstraintViolation> propertyViolations;
 
-   private List<ResteasyConstraintViolation> classViolations;
+   private volatile List<ResteasyConstraintViolation> classViolations;
 
-   private List<ResteasyConstraintViolation> parameterViolations;
+   private volatile List<ResteasyConstraintViolation> parameterViolations;
 
-   private List<ResteasyConstraintViolation> returnValueViolations;
+   private volatile List<ResteasyConstraintViolation> returnValueViolations;
 
-   private List<ResteasyConstraintViolation> allViolations;
+   private volatile List<ResteasyConstraintViolation> allViolations;
 
-   private List<List<ResteasyConstraintViolation>> violationLists;
+   private  volatile List<List<ResteasyConstraintViolation>> violationLists;
 
    private transient ConstraintTypeUtil util = getConstraintTypeUtil();
 
@@ -141,7 +142,7 @@ public abstract class ResteasyViolationException extends ConstraintViolationExce
       convertViolations();
       if (allViolations == null)
       {
-         allViolations = new ArrayList<ResteasyConstraintViolation>();
+         allViolations = new CopyOnWriteArrayList<>();
          allViolations.addAll(propertyViolations);
          allViolations.addAll(classViolations);
          allViolations.addAll(parameterViolations);
@@ -189,14 +190,12 @@ public abstract class ResteasyViolationException extends ConstraintViolationExce
    {
       convertViolations();
       StringBuffer sb = new StringBuffer();
-      for (Iterator<List<ResteasyConstraintViolation>> it = violationLists.iterator(); it.hasNext();)
-      {
-         List<ResteasyConstraintViolation> violations = it.next();
-         for (Iterator<ResteasyConstraintViolation> it2 = violations.iterator(); it2.hasNext();)
-         {
-            sb.append(it2.next().toString()).append('\r');
+      for (List<ResteasyConstraintViolation> violations : violationLists) {
+         for (ResteasyConstraintViolation violation: violations ) {
+            sb.append(violation.toString()).append('\r');
          }
       }
+
       return sb.toString();
    }
 
@@ -250,11 +249,12 @@ public abstract class ResteasyViolationException extends ConstraintViolationExce
          throw new RuntimeException(Messages.MESSAGES.unableToParseException());
       }
 
-      violationLists = new ArrayList<List<ResteasyConstraintViolation>>();
+      List<List<ResteasyConstraintViolation>> violationLists = new ArrayList<List<ResteasyConstraintViolation>>();
       violationLists.add(propertyViolations);
       violationLists.add(classViolations);
       violationLists.add(parameterViolations);
       violationLists.add(returnValueViolations);
+      this.violationLists = new CopyOnWriteArrayList<>(violationLists);
    }
 
    protected int getField(int start, String line)
@@ -311,10 +311,10 @@ public abstract class ResteasyViolationException extends ConstraintViolationExce
          return;
       }
 
-      propertyViolations = new ArrayList<ResteasyConstraintViolation>();
-      classViolations = new ArrayList<ResteasyConstraintViolation>();
-      parameterViolations = new ArrayList<ResteasyConstraintViolation>();
-      returnValueViolations = new ArrayList<ResteasyConstraintViolation>();
+      propertyViolations = new CopyOnWriteArrayList<>();
+      classViolations = new CopyOnWriteArrayList<>();
+      parameterViolations = new CopyOnWriteArrayList<>();
+      returnValueViolations = new CopyOnWriteArrayList<>();
 
       if (getConstraintViolations() != null)
       {
@@ -345,7 +345,7 @@ public abstract class ResteasyViolationException extends ConstraintViolationExce
          }
       }
 
-      violationLists = new ArrayList<List<ResteasyConstraintViolation>>();
+      violationLists = new CopyOnWriteArrayList<>();
       violationLists.add(propertyViolations);
       violationLists.add(classViolations);
       violationLists.add(parameterViolations);
