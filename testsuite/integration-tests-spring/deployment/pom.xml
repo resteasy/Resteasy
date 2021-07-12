@@ -86,6 +86,73 @@
             <jboss.home>${project.build.directory}/test-server/wildfly-${server.version}</jboss.home>
           </properties>
         </profile>
+        <!--
+        Name:  localWildfly
+        Descr: Use WildFly declared by -Dserver.home
+        -->
+        <profile>
+            <id>localWildfly</id>
+            <activation>
+                <property>
+                    <name>server.home</name>
+                </property>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-antrun-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>unpack-resteasy</id>
+                                <phase>generate-test-resources</phase>
+                                <configuration>
+                                    <target>
+                                        <!-- Explicitly remove resteasy-spring contents as the module.xml does not reference resource jars in this case
+                                             so adding jars without removing old ones basically messes up the classloader -->
+                                        <delete>
+                                            <fileset
+                                                  dir="${server.home}/modules/system/layers/base/org/jboss/resteasy/resteasy-spring/main"
+                                                  includes="**/*.jar"/>
+                                        </delete>
+                                        <unzip src="../../../jboss-modules/target/resteasy-jboss-modules-${project.version}.zip"
+                                               dest="${server.home}/modules/system/layers/base"
+                                               overwrite="true"/>
+                                        <!-- keep copy of original standalone for env reset -->
+                                        <zip destfile="${server.home}/standalone/configuration/standalone-BACKUP.zip"
+                                             basedir="${server.home}/standalone/configuration"
+                                             includes="standalone*.xml"
+                                             update="true" />
+                                    </target>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                            <execution>
+                                <id>reset-wildfly-config</id>
+                                <phase>post-integration-test</phase>
+                                <configuration>
+                                    <target>
+                                        <!-- reset to initial env -->
+                                        <unzip src="${server.home}/standalone/configuration/standalone-BACKUP.zip"
+                                               dest="${server.home}/standalone/configuration"
+                                               overwrite="true"/>
+                                        <delete file="${server.home}/standalone/configuration/standalone-BACKUP.zip" />
+                                    </target>
+                                </configuration>
+                                <goals>
+                                    <goal>run</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+            <properties>
+                <jboss.home>${server.home}</jboss.home>
+            </properties>
+        </profile>
     </profiles>
 
     <build>
