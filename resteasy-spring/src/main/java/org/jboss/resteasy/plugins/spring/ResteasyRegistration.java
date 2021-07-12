@@ -1,6 +1,7 @@
 package org.jboss.resteasy.plugins.spring;
 
-import org.springframework.beans.factory.annotation.Required;
+//org.jboss.logging.annotations.Message.Format.MESSAGE_FORMATimport org.springframework.beans.factory.annotation.Required;
+import org.springframework.beans.factory.annotation.Autowired;
 
 /**
  * @author <a href="mailto:sduskis@gmail.com">Solomn Duskis</a>
@@ -23,7 +24,7 @@ public class ResteasyRegistration
       this.beanName = beanName;
    }
 
-   @Required
+   @Autowired
    public String getContext()
    {
       return context;
@@ -34,7 +35,7 @@ public class ResteasyRegistration
       this.context = context;
    }
 
-   @Required
+   @Autowired
    public String getBeanName()
    {
       return this.beanName;
