@@ -72,16 +72,15 @@ public class ResteasyJackson2Provider extends JacksonJaxbJsonProvider implements
 
    private static class ClassAnnotationKey
    {
-      private AnnotationArrayKey annotations;
-      private ClassKey classKey;
-      private int hash;
+      private final  Annotation[] annotations;
+      private final ClassKey classKey;
+      private final int hash;
 
       private ClassAnnotationKey(final Class<?> clazz, final Annotation[] annotations)
       {
-         this.annotations = new AnnotationArrayKey(annotations);
          this.classKey = new ClassKey(clazz);
-         hash = this.annotations.hashCode();
-         hash = 31 * hash + classKey.hashCode();
+         this.annotations = annotations;
+         hash = Arrays.hashCode(this.annotations) + classKey.hashCode();
       }
 
       @Override
@@ -91,59 +90,18 @@ public class ResteasyJackson2Provider extends JacksonJaxbJsonProvider implements
          if (o == null || getClass() != o.getClass()) return false;
 
          ClassAnnotationKey that = (ClassAnnotationKey) o;
-
-         if (!annotations.equals(that.annotations)) return false;
          if (!classKey.equals(that.classKey)) return false;
-
-         return true;
-      }
-
-      @Override
-      public int hashCode()
-      {
-         return hash;
-      }
-   }
-
-   // Alternative to Jackson's AnnotationBundleKey that uses object equality
-   // instead of referential equality (==) due to how parameter annotations are proxied and not cached.
-   private static class AnnotationArrayKey
-   {
-      private static final Annotation[] NO_ANNOTATIONS = new Annotation[0];
-
-      private final Annotation[] annotations;
-      private final int hash;
-
-      private AnnotationArrayKey(final Annotation[] annotations)
-      {
-         if (annotations == null || annotations.length == 0) {
-            this.annotations = NO_ANNOTATIONS;
-         } else {
-            this.annotations = annotations;
+         //if method annotations the same
+         if (annotations != null && annotations.equals(that.annotations)) {
+            return true;
          }
-         this.hash = calcHash(this.annotations);
-      }
-
-      private static int calcHash(Annotation[] annotations)
-      {
-         int result = annotations.length;
-         result = 31 * result + Arrays.hashCode(annotations);
-         return result;
+         return Arrays.equals(annotations, that.annotations);
       }
 
       @Override
       public int hashCode()
       {
          return hash;
-      }
-
-      @Override
-      public boolean equals(Object object)
-      {
-         if (this == object) return true;
-         if (object == null || getClass() != object.getClass()) return false;
-         AnnotationArrayKey that = (AnnotationArrayKey) object;
-         return hash == that.hash && java.util.Arrays.equals(annotations, that.annotations);
       }
    }
 

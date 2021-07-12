@@ -212,19 +212,21 @@ public abstract class AbstractBuiltResponse extends Response
 
    public void addMethodAnnotations(Annotation[] methodAnnotations)
    {
-      List<Annotation> ann = new ArrayList<Annotation>();
       if (annotations != null)
       {
+         List<Annotation> ann = new ArrayList<Annotation>();
          for (Annotation annotation : annotations)
          {
             ann.add(annotation);
          }
+         for (Annotation annotation : methodAnnotations)
+         {
+            ann.add(annotation);
+         }
+         annotations = ann.toArray(new Annotation[ann.size()]);
+      } else {
+         annotations = methodAnnotations;
       }
-      for (Annotation annotation : methodAnnotations)
-      {
-         ann.add(annotation);
-      }
-      annotations = ann.toArray(new Annotation[ann.size()]);
    }
 
 
