@@ -3,8 +3,6 @@ package org.jboss.resteasy.plugins.servlet;
 import org.jboss.resteasy.core.AsynchronousDispatcher;
 import org.jboss.resteasy.plugins.server.servlet.HttpServlet30Dispatcher;
 import org.jboss.resteasy.plugins.server.servlet.ResteasyContextParameters;
-import org.jboss.resteasy.plugins.servlet.i18n.Messages;
-import org.jboss.resteasy.spi.NotImplementedYetException;
 
 import javax.servlet.ServletContainerInitializer;
 import javax.servlet.ServletContext;
@@ -15,7 +13,6 @@ import javax.ws.rs.ApplicationPath;
 import javax.ws.rs.Path;
 import javax.ws.rs.core.Application;
 import javax.ws.rs.ext.Provider;
-
 import java.util.HashSet;
 import java.util.Set;
 
@@ -29,6 +26,7 @@ public class ResteasyServletInitializer implements ServletContainerInitializer
    private static final String RESTEASY_MAPPING_PREFIX = "resteasy.servlet.mapping.prefix";
    private static final String APPLICATION = "javax.ws.rs.Application";
    static final Set<String> ignoredPackages = new HashSet<String>();
+   private static final String DEFAULT_APP_CLAZZ = DefaultApplicationClazz.class.getName();
 
    static
    {
@@ -57,32 +55,21 @@ public class ResteasyServletInitializer implements ServletContainerInitializer
       }
       if (appClasses.size() == 0 && resources.size() == 0) return;
 
-      if (appClasses.size() == 0)
-      {
-         // todo make sure we can do this on all servlet containers
-         // handleNoApplicationClass(providers, resources, servletContext);
-         return;
+      if (appClasses.size() > 1) {
+         for (Class<?> app : appClasses) {
+            // App has provided an Application impl.  The local default one
+            // isn't needed.  Remove it.
+            if (DEFAULT_APP_CLAZZ.equals(app.getName())) {
+               appClasses.remove(app);
+               break;
+            }
+         }
       }
 
       for (Class<?> app : appClasses)
       {
          register(app, providers, resources, servletContext);
       }
-   }
-
-   protected void handleNoApplicationClass(Set<Class<?>> providers, Set<Class<?>> resources, ServletContext servletContext)
-   {
-      ServletRegistration defaultApp = null;
-      for (ServletRegistration reg : servletContext.getServletRegistrations().values())
-      {
-         if (reg.getName().equals(Application.class.getName()))
-         {
-            defaultApp = reg;
-         }
-      }
-      if (defaultApp == null) return;
-      throw new NotImplementedYetException(Messages.MESSAGES.defaultApplicationNotImplemented());
-
    }
 
    private Set<ServletRegistration> getServletsForApplication(Class<?> applicationClass, ServletContext servletContext)
