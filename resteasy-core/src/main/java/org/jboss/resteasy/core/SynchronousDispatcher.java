@@ -25,6 +25,7 @@ import javax.ws.rs.NotFoundException;
 import javax.ws.rs.container.ContainerRequestFilter;
 import javax.ws.rs.container.ResourceContext;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Request;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
@@ -215,6 +216,14 @@ public class SynchronousDispatcher implements Dispatcher
          onComplete.accept(null);
          return;
       }
+      // FIXME: losing X-Request-ID because ThreadLocal that keeps it in the application will not be there anymore when
+      // the ExceptionHandler below is called...
+      MultivaluedMap<String, Object> originalResponseHeaders = response.getOutputHeaders();
+      // cleans possibly partially written response
+      response.reset();
+      // FIXME: ... but maybe constructing the headers anew is actually the ExceptionHandler's job, since this is
+      // duplicating the Content-Type in the Map (no impact in the received Response in the browser though).
+      response.getOutputHeaders().putAll(originalResponseHeaders);
       Response handledResponse = new ExceptionHandler(providerFactory, unwrappedExceptions).handleException(request, e);
       if (handledResponse == null) throw new UnhandledException(e);
       if (!bufferExceptionEntity)
