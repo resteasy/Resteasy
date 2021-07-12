@@ -1,5 +1,7 @@
 package org.jboss.resteasy.plugins.providers.sse.client;
 
+import java.security.AccessController;
+import java.security.PrivilegedAction;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Phaser;
 import java.util.concurrent.RejectedExecutionException;
@@ -143,7 +145,13 @@ class SseEventSourceScheduler
          this.phaser.arriveAndDeregister();
          if (this.shutdownExecutorService)
          {
-            this.scheduledExecutorService.shutdownNow();
+            AccessController.doPrivileged(new PrivilegedAction<Void>() {
+              @Override
+              public Void run() {
+                scheduledExecutorService.shutdownNow();
+                return null;
+              }
+           });
          }
       }
    }
