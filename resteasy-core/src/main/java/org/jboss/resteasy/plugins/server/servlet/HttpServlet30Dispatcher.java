@@ -24,7 +24,14 @@ import java.util.concurrent.ScheduledExecutorService;
 @WebServlet(asyncSupported = true, value="/RESTEASY_HttpServlet30Dispatcher")
 public class HttpServlet30Dispatcher extends HttpServletDispatcher
 {
-   ScheduledExecutorService asyncCancelScheduler = Executors.newScheduledThreadPool(0);  // this is to get around TCK tests that call setTimeout in a separate thread which is illegal.
+   /**
+    * Setting the corePoolSize to 1 to workaround the
+    * <a href="https://bugs.openjdk.java.net/browse/JDK-8129861">bug</a>
+    * in openjdk 8, which impacts performance of applications using
+    * {@link javax.ws.rs.container.AsyncResponse#setTimeout}.
+    */
+   private final ScheduledExecutorService asyncCancelScheduler = Executors.newScheduledThreadPool(1);
+
    @Override
    protected HttpRequest createHttpRequest(String httpMethod, HttpServletRequest httpServletRequest, ResteasyHttpHeaders httpHeaders, ResteasyUriInfo uriInfo, HttpResponse httpResponse, HttpServletResponse httpServletResponse)
    {
