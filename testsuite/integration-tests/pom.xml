@@ -181,7 +181,7 @@
                 </plugins>
             </build>
         </profile>
-        <!-- 
+        <!--
             Test against MicroProfile config.
             standalone-microprofile.xml is used to replace occurrences of
             standalone-full.xml in Arquillian configuration (arquillian.xml)
@@ -196,14 +196,14 @@
             <properties>
                 <jboss.server.config.file.name>standalone-microprofile.xml</jboss.server.config.file.name>
                 <!--
-                    Excluding those tests that would need modules 
-                    which are in standalone-full.xml but not in 
+                    Excluding those tests that would need modules
+                    which are in standalone-full.xml but not in
                     standalone-microprofile.xml
                 -->
                 <microprofile.excluded.groups>,org.jboss.resteasy.category.ExpectedFailingWithStandaloneMicroprofileConfiguration,org.jboss.resteasy.category.ExpectedFailingBecauseOfSmallRyeMicroprofileOpenApi11</microprofile.excluded.groups>
             </properties>
         </profile>
-        
+
         <profile>
             <id>bootablejar.profile</id>
             <activation>
@@ -251,17 +251,15 @@
                                             <groupId>${testsuite.wildfly.galleon.pack.group.id}</groupId>
                                             <artifactId>wildfly-galleon-pack</artifactId>
                                             <version>${server.version}</version>
-                                            <!-- Required for rxjava -->
                                             <includedPackages>
+                                                <!-- Required for rxjava -->
                                                 <package>org.jboss.resteasy.resteasy-rxjava2</package>
-                                            </includedPackages>
-                                            <!--
-                                                Required for BC - this is needed to resemble what in
-                                                jboss-deployment-structure-bouncycastle.xml.
-                                                That deployment structure is used by some test cases and is expected
-                                                to reflect the server module working configuration.
-                                            -->
-                                            <includedPackages>
+                                                <!--
+                                                    Required for BC - this is needed to resemble what in
+                                                    jboss-deployment-structure-bouncycastle.xml.
+                                                    That deployment structure is used by some test cases and is expected
+                                                    to reflect the server module working configuration.
+                                                -->
                                                 <package>org.bouncycastle</package>
                                             </includedPackages>
                                         </feature-pack>
@@ -425,7 +423,7 @@
             <version>${version.resteasy.testsuite}</version>
             <scope>provided</scope>
         </dependency>
-        
+
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-jaxb-provider</artifactId>
@@ -546,19 +544,19 @@
             <artifactId>resteasy-netty4</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-wadl-undertow-connector</artifactId>
             <version>${project.version}</version>
         </dependency>
-        
+
         <dependency>
             <groupId>org.jboss.resteasy</groupId>
             <artifactId>resteasy-html</artifactId>
             <version>${project.version}</version>
         </dependency>
-                         
+
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
@@ -624,7 +622,7 @@
             <groupId>org.hamcrest</groupId>
             <artifactId>hamcrest-all</artifactId>
         </dependency>
-        
+
         <dependency>
             <groupId>org.glassfish</groupId>
             <artifactId>jakarta.el</artifactId>
@@ -667,7 +665,7 @@
             <artifactId>rxjava</artifactId>
             <scope>provided</scope>
         </dependency>
-                
+
         <dependency>
             <groupId>io.reactivex.rxjava2</groupId>
             <artifactId>rxjava</artifactId>
@@ -692,8 +690,8 @@
             <groupId>org.jboss.logging</groupId>
             <artifactId>jboss-logging-annotations</artifactId>
 	    <scope>provided</scope>
-        </dependency>    
-        
+        </dependency>
+
         <dependency>
             <groupId>org.eclipse.microprofile.config</groupId>
             <artifactId>microprofile-config-api</artifactId>
@@ -703,7 +701,7 @@
         <dependency>
             <groupId>io.smallrye.config</groupId>
             <artifactId>smallrye-config</artifactId>
-        </dependency>    
+        </dependency>
     </dependencies>
 
     <build>
@@ -736,7 +734,7 @@
                                      the original into new place.
                                      This helps to isolate the multiple running instances.
                                      One copy per each container in arquillian.xml -->
-                                
+
                                 <delete quiet="true" dir="${container.base.dir.managed}" />
                                 <copy todir="${container.base.dir.managed}" overwrite="true" failonerror="true">
                                     <fileset dir="${jboss.home}/standalone"/>
