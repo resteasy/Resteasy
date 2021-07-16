@@ -4,6 +4,7 @@ import org.jboss.arquillian.container.test.api.Deployment;
 import org.jboss.arquillian.container.test.api.RunAsClient;
 import org.jboss.arquillian.junit.Arquillian;
 import org.jboss.logging.Logger;
+import org.jboss.resteasy.category.MicroProfileDependent;
 import org.jboss.resteasy.microprofile.client.RestClientBuilderImpl;
 import org.jboss.resteasy.test.microprofile.restclient.resource.FollowRedirectsResource;
 import org.jboss.resteasy.test.microprofile.restclient.resource.FollowRedirectsService;
@@ -15,6 +16,7 @@ import org.jboss.shrinkwrap.api.spec.WebArchive;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.runner.RunWith;
 
 import javax.ws.rs.core.Response;
@@ -28,6 +30,7 @@ import java.net.URI;
  */
 @RunWith(Arquillian.class)
 @RunAsClient
+@Category(MicroProfileDependent.class)
 public class FollowRedirectsTest {
     protected static final Logger LOG = Logger.getLogger(FollowRedirectsTest.class.getName());
     private static final String WAR_SERVICE = "followRedirects_service";
