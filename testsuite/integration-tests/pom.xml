@@ -302,6 +302,7 @@
                                 <container.qualifier.managed.encoding>${container.qualifier.managed.encoding}</container.qualifier.managed.encoding>
                                 <container.offset.managed.encoding>${container.offset.managed.encoding}</container.offset.managed.encoding>
                                 <container.management.port.managed.encoding>${container.management.port.managed.encoding}</container.management.port.managed.encoding>
+                                <resteasy.microprofile.sseclient.buffersize>5</resteasy.microprofile.sseclient.buffersize>
                             </systemPropertyVariables>
                         </configuration>
                         <executions>
